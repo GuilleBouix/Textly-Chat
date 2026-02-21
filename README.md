@@ -1,4 +1,4 @@
-# Informe de Proyecto: Chat Dual con Redaccion Asistida (IA)
+# Textly Chat: Chat Dual con IA Asistida.
 
 Este documento describe la logica, la arquitectura de datos y el flujo de trabajo de la aplicacion.
 
