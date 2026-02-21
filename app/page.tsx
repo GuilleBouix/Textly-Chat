@@ -1,96 +1,246 @@
 "use client";
-import { useState, useEffect } from "react";
-import { supabase } from "./lib/supabaseClient";
+import { useEffect, useRef, useState } from "react";
+import { useChat } from "./hooks/useChat";
+import Sidebar from "./components/Sidebar";
+import Modal from "./components/Modal";
 
-type Room = {
-  id?: string | number;
-  name?: string;
-  [key: string]: unknown;
+const formatearHora = (fechaISO: string) => {
+  const fecha = new Date(fechaISO);
+  if (Number.isNaN(fecha.getTime())) return "--:--";
+
+  return fecha.toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 };
 
-export default function Home() {
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [status, setStatus] = useState("Conectando...");
+const inicialNombre = (nombre?: string, email?: string) => {
+  if (nombre?.trim()) return nombre.trim().charAt(0).toUpperCase();
+  if (email?.trim()) return email.trim().charAt(0).toUpperCase();
+  return "?";
+};
+
+export default function ChatPage() {
+  const {
+    usuario,
+    salas,
+    idSalaActiva,
+    setIdSalaActiva,
+    mensajes,
+    nuevoMensaje,
+    setNuevoMensaje,
+    cargandoIA,
+    enviarMensaje,
+    crearSala,
+    unirseASala,
+    eliminarSala,
+    mejorarMensajeIA,
+    perfiles,
+    errorSalaEliminada,
+  } = useChat();
+
+  const [mostrarModalUnirse, setMostrarModalUnirse] = useState(false);
+  const [idSalaAEliminar, setIdSalaAEliminar] = useState<string | null>(null);
+  const [codigoEntrada, setCodigoEntrada] = useState("");
+  const finMensajesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    async function fetchRooms() {
-      const { data, error } = await supabase.from("rooms").select("*");
+    finMensajesRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [mensajes, idSalaActiva]);
 
-      if (error) {
-        console.error("Error conectando a Supabase:", error);
-        setStatus("Error de conexion");
-        return;
-      }
+  useEffect(() => {
+    if (!errorSalaEliminada) return;
+    alert(errorSalaEliminada + " La pagina se actualizara.");
+    window.location.reload();
+  }, [errorSalaEliminada]);
 
-      setRooms((data as Room[]) ?? []);
-      setStatus("Conexion exitosa");
+  const handleConfirmarUnion = async () => {
+    const resultado = await unirseASala(codigoEntrada);
+    if (resultado.success) {
+      setMostrarModalUnirse(false);
+      setCodigoEntrada("");
+    } else {
+      alert(resultado.error);
     }
-
-    fetchRooms();
-  }, []);
-
-  const statusClass =
-    status === "Conexion exitosa"
-      ? "border-emerald-400/30 bg-emerald-400/15 text-emerald-200"
-      : status === "Error de conexion"
-        ? "border-rose-400/30 bg-rose-400/15 text-rose-200"
-        : "border-sky-400/30 bg-sky-400/15 text-sky-200";
+  };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-36 left-1/2 h-112 w-md -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute right-1/4 top-1/3 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
-      </div>
+    <div className="flex h-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
+      <Sidebar
+        usuario={usuario}
+        salas={salas}
+        idSalaActiva={idSalaActiva || ""}
+        alSeleccionarSala={setIdSalaActiva}
+        alEliminarSala={setIdSalaAEliminar}
+        abrirModalUnirse={() => setMostrarModalUnirse(true)}
+        alCrearSala={crearSala}
+      />
 
-      <section className="relative mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-6 py-12">
-        <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-10">
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-300">
-                Textly Chat
-              </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Dashboard principal
-              </h1>
-            </div>
-            <span
-              className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${statusClass}`}
-            >
-              {status}
-            </span>
-          </div>
+      <section className="flex-1 flex flex-col bg-zinc-950 relative">
+        {idSalaActiva ? (
+          <>
+            <header className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50 backdrop-blur-md">
+              <div>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
+                  Sala Activa
+                </p>
+                <h2 className="text-sm font-mono font-bold text-blue-400">
+                  #{salas.find((s) => s.id === idSalaActiva)?.share_code}
+                </h2>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
+                  Mi Perfil
+                </p>
+                <p className="text-xs font-medium">{usuario?.email}</p>
+              </div>
+            </header>
 
-          <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-slate-200">
-                Salas detectadas
-              </h2>
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-slate-200">
-                {rooms.length}
-              </span>
-            </div>
+            <main className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+              {mensajes.map((msg) => {
+                const esMio = msg.sender_id === usuario?.id;
+                const perfil = perfiles[msg.sender_id];
+                const inicial = inicialNombre(perfil?.nombre, perfil?.email);
 
-            {rooms.length === 0 ? (
-              <p className="text-sm text-slate-400">
-                No hay salas para mostrar todavia.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {rooms.map((room, index) => (
-                  <li
-                    key={String(room.id ?? index)}
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200"
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex items-start gap-2 ${esMio ? "justify-end" : "justify-start"}`}
                   >
-                    {String(room.name ?? `Sala ${index + 1}`)}
-                  </li>
-                ))}
-              </ul>
-            )}
+                    {!esMio && (
+                      <div className="mt-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-800">
+                        {perfil?.avatarUrl ? (
+                          <img
+                            src={perfil.avatarUrl}
+                            alt={perfil?.nombre || "Usuario"}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs font-bold text-zinc-200">
+                            {inicial}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div
+                      className={`relative max-w-[75%] p-3 rounded-2xl shadow-lg ${
+                        esMio
+                          ? "bg-blue-600 text-white rounded-tr-sm"
+                          : "bg-zinc-800 text-zinc-200 rounded-tl-sm border border-zinc-700"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-2 h-2.5 w-2.5 rotate-45 ${
+                          esMio
+                            ? "-right-1.5 bg-blue-600"
+                            : "-left-1.5 border-l border-t border-zinc-700 bg-zinc-800"
+                        }`}
+                      />
+                      <p className="text-sm leading-relaxed">{msg.content}</p>
+                      <p
+                        className={`mt-1 text-[10px] ${esMio ? "text-blue-100/80" : "text-zinc-400"}`}
+                      >
+                        {formatearHora(msg.created_at)}
+                      </p>
+                    </div>
+
+                    {esMio && (
+                      <div className="mt-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-800">
+                        {perfil?.avatarUrl ? (
+                          <img
+                            src={perfil.avatarUrl}
+                            alt={perfil?.nombre || "Usuario"}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs font-bold text-zinc-200">
+                            {inicial}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div ref={finMensajesRef} />
+            </main>
+
+            <footer className="p-4 bg-linear-to-t from-zinc-950 to-transparent">
+              <form
+                onSubmit={enviarMensaje}
+                className="p-2 bg-zinc-900 rounded-2xl border border-zinc-800 shadow-2xl flex items-center gap-2 focus-within:border-zinc-600 transition-all"
+              >
+                <input
+                  value={nuevoMensaje}
+                  onChange={(e) => setNuevoMensaje(e.target.value)}
+                  placeholder="Escribe un mensaje..."
+                  className="flex-1 bg-transparent outline-none p-2 text-sm text-zinc-100"
+                />
+
+                <button
+                  type="button"
+                  onClick={mejorarMensajeIA}
+                  disabled={cargandoIA}
+                  className={`p-2 rounded-full hover:bg-zinc-800 transition-all ${cargandoIA ? "animate-pulse" : ""}`}
+                  title="Mejorar con IA"
+                >
+                  *
+                </button>
+
+                <button className="bg-white text-black px-5 py-2 rounded-xl font-bold text-sm hover:bg-zinc-200 transition-transform active:scale-95">
+                  Enviar
+                </button>
+              </form>
+            </footer>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <div className="w-16 h-16 bg-zinc-900 rounded-3xl flex items-center justify-center mb-4 border border-zinc-800">
+              <span className="text-3xl">?</span>
+            </div>
+            <h2 className="text-xl font-bold mb-2">
+              Hola, {usuario?.email?.split("@")[0]}!
+            </h2>
+            <p className="text-zinc-500 text-sm max-w-xs">
+              Selecciona una conversacion a la izquierda o crea una nueva sala
+              para invitar a alguien.
+            </p>
           </div>
-        </div>
+        )}
       </section>
-    </main>
+
+      <Modal
+        titulo="Unirse a una sala"
+        descripcion="Ingresa el codigo compartido para entrar al chat."
+        abierto={mostrarModalUnirse}
+        alCerrar={() => setMostrarModalUnirse(false)}
+        alConfirmar={handleConfirmarUnion}
+        textoConfirmar="Unirme"
+      >
+        <input
+          autoFocus
+          value={codigoEntrada}
+          onChange={(e) => setCodigoEntrada(e.target.value)}
+          className="w-full bg-zinc-950 border border-zinc-800 p-3 rounded-xl outline-none focus:border-blue-500 transition-all font-mono tracking-widest uppercase text-center text-lg"
+          placeholder="12345678"
+          maxLength={8}
+        />
+      </Modal>
+
+      <Modal
+        titulo="Eliminar esta sala?"
+        descripcion="Esto borrara todos los mensajes de forma permanente para ambos participantes."
+        abierto={!!idSalaAEliminar}
+        alCerrar={() => setIdSalaAEliminar(null)}
+        alConfirmar={() => {
+          if (idSalaAEliminar) eliminarSala(idSalaAEliminar);
+          setIdSalaAEliminar(null);
+        }}
+        colorBoton="bg-red-600"
+        textoConfirmar="Eliminar para siempre"
+      />
+    </div>
   );
 }
