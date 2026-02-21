@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Informe de Proyecto: Chat Dual con Redaccion Asistida (IA)
 
-## Getting Started
+Este documento describe la logica, la arquitectura de datos y el flujo de trabajo de la aplicacion.
 
-First, run the development server:
+## 1. Stack tecnologico
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework:** Next.js 15 (App Router)
+- **Estilos:** Tailwind CSS
+- **Base de datos y tiempo real:** Supabase
+- **IA:** Google Gemini 1.5 Flash (via Route Handler seguro)
+- **Autenticacion:** Supabase Auth (Google Provider)
+
+## 2. Arquitectura de datos (Supabase)
+
+Se usan dos tablas principales con **RLS (Row Level Security)** activado para garantizar que cada usuario solo acceda a sus datos.
+
+### `rooms` (salas de chat)
+
+- `id`: identificador unico (`UUID`)
+- `created_at`: fecha de creacion
+- `participant_1`: ID del primer usuario
+- `participant_2`: ID del segundo usuario
+
+**Politica de seguridad:** solo los participantes de la sala pueden leer su fila.
+
+### `messages` (mensajes)
+
+- `id`: identificador unico
+- `room_id`: clave foranea hacia la sala
+- `sender_id`: ID del usuario que envia
+- `content`: texto del mensaje
+- `created_at`: timestamp con zona horaria
+
+**Politica de seguridad:** un usuario solo puede insertar mensajes con su propio `sender_id`.
+
+## 3. Funciones principales y flujos logicos
+
+### A) Comunicacion en tiempo real
+
+- **Envio optimista:** al presionar "Enviar", el mensaje aparece de inmediato en UI mientras se persiste en la base de datos.
+- **Suscripcion realtime:** la app escucha nuevos `INSERT` en `messages`; si `sender_id` no coincide con el usuario actual, renderiza el mensaje entrante.
+- **Indicador de escritura:** se utiliza Supabase Broadcast para eventos efimeros de "esta escribiendo..." sin escribir en base de datos.
+
+### B) Funcion de mejora de redaccion (IA)
+
+1. El usuario escribe en el input y activa la mejora con boton "IA" (o atajo).
+2. El texto se envia a un Route Handler interno de Next.js para proteger la API Key.
+3. Se guarda un respaldo temporal del texto original (`backup state`).
+4. La IA devuelve una sugerencia de redaccion.
+5. El usuario puede:
+   - **Aceptar:** reemplaza el input por la sugerencia.
+   - **Rechazar / `Esc`:** descarta la sugerencia y restaura el texto original.
+
+## 4. Configuracion de IA (Prompt Engineering)
+
+El sistema usa un prompt oculto para que Gemini actue como herramienta de correccion, no como chat:
+
+```text
+Eres un corrector de estilo profesional. Tu unica tarea es recibir un mensaje y devolver una version mas clara, profesional y sin errores gramaticales. NO respondas con saludos ni explicaciones. Solo devuelve el texto corregido. Si el texto no puede mejorarse, devuelvelo exactamente igual.
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 5. Medidas de seguridad clave
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Proteccion de API Key:** la clave de Gemini nunca se expone al navegador; permanece en servidor.
+- **Validacion de sesion:** antes de procesar texto con IA, el backend verifica sesion activa en Supabase.
+- **RLS en base de datos:** las politicas SQL impiden leer mensajes ajenos sin credenciales validas de participante.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 6. Experiencia de usuario (UX)
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Bloqueo preventivo:** mientras la IA genera sugerencia, el input se bloquea para evitar conflictos de edicion.
+- **Manejo de errores:** si la IA falla, el input se desbloquea y el usuario puede enviar el texto original sin perdida.
