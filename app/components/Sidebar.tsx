@@ -1,5 +1,7 @@
 "use client";
 import { UsuarioSupabase, Sala } from "../types/database";
+import { LuMessageCirclePlus } from "react-icons/lu";
+import { LuLogOut } from "react-icons/lu";
 
 interface SidebarProps {
   usuario: UsuarioSupabase | null;
@@ -9,6 +11,7 @@ interface SidebarProps {
   alEliminarSala: (id: string) => void;
   abrirModalUnirse: () => void;
   alCrearSala: () => void;
+  alCerrarSesion: () => void;
 }
 
 export default function Sidebar({
@@ -19,6 +22,7 @@ export default function Sidebar({
   alEliminarSala,
   abrirModalUnirse,
   alCrearSala,
+  alCerrarSesion,
 }: SidebarProps) {
   return (
     <aside className="w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col h-full">
@@ -33,6 +37,14 @@ export default function Sidebar({
           </p>
           <p className="text-[10px] text-zinc-500 truncate">{usuario?.email}</p>
         </div>
+        <button
+          onClick={alCerrarSesion}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
+          title="Cerrar sesion"
+        >
+          <LuLogOut className="text-sm" />
+          Salir
+        </button>
       </div>
 
       {/* ACCIONES */}
@@ -45,8 +57,9 @@ export default function Sidebar({
         </button>
         <button
           onClick={abrirModalUnirse}
-          className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-2 rounded-xl border border-zinc-700 transition-all text-sm"
+          className="flex justify-center items-center gap-2 w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-2 rounded-xl border border-zinc-700 transition-all text-sm"
         >
+          <LuMessageCirclePlus />
           Unirse con código
         </button>
       </div>

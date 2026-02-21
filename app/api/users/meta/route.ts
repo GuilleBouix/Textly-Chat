@@ -10,6 +10,17 @@ type BasicUser = {
   avatarUrl: string | null;
 };
 
+const getIdentityData = (authUser: any) => {
+  const identities = Array.isArray(authUser?.identities) ? authUser.identities : [];
+  for (const identity of identities) {
+    const identityData = identity?.identity_data;
+    if (identityData && typeof identityData === "object") {
+      return identityData as Record<string, unknown>;
+    }
+  }
+  return null;
+};
+
 export async function POST(req: Request) {
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -60,10 +71,22 @@ export async function POST(req: Request) {
 
     const results = await Promise.all(
       ids.map(async (id) => {
-        const { data } = await admin.auth.admin.getUserById(id);
+        const { data, error } = await admin.auth.admin.getUserById(id);
+        if (error) {
+          console.error("Error getUserById:", { id, message: error.message });
+          return null;
+        }
         const authUser = data?.user;
 
         if (!authUser) return null;
+        const identityData = getIdentityData(authUser);
+        const identityName =
+          (identityData?.full_name as string) || (identityData?.name as string) || null;
+        const identityAvatar =
+          (identityData?.avatar_url as string) ||
+          (identityData?.picture as string) ||
+          (identityData?.photoURL as string) ||
+          null;
 
         return {
           id: authUser.id,
@@ -71,11 +94,13 @@ export async function POST(req: Request) {
           nombre:
             (authUser.user_metadata?.full_name as string) ||
             (authUser.user_metadata?.name as string) ||
+            identityName ||
             authUser.email?.split("@")[0] ||
             "Usuario",
           avatarUrl:
             (authUser.user_metadata?.avatar_url as string) ||
             (authUser.user_metadata?.picture as string) ||
+            identityAvatar ||
             null,
         } satisfies BasicUser;
       }),

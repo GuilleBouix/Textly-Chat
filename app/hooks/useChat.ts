@@ -77,7 +77,11 @@ export function useChat() {
         body: JSON.stringify({ ids: faltantes }),
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Error /api/users/meta:", err);
+        return;
+      }
 
       const data = await res.json();
       if (Array.isArray(data?.users)) {
@@ -331,6 +335,40 @@ export function useChat() {
     }
   };
 
+  const limpiarSesionCliente = () => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach((key) => {
+        if (key.startsWith("sb-")) localStorage.removeItem(key);
+      });
+    } catch {}
+
+    try {
+      const keys = Object.keys(sessionStorage);
+      keys.forEach((key) => {
+        if (key.startsWith("sb-")) sessionStorage.removeItem(key);
+      });
+    } catch {}
+
+    try {
+      document.cookie.split(";").forEach((cookie) => {
+        const eqPos = cookie.indexOf("=");
+        const name =
+          eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+        if (!name) return;
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      });
+    } catch {}
+  };
+
+  const cerrarSesion = async () => {
+    await supabase.auth.signOut({ scope: "global" });
+    limpiarSesionCliente();
+    window.location.href = "/login";
+  };
+
   return {
     usuario,
     salas,
@@ -347,5 +385,6 @@ export function useChat() {
     unirseASala,
     eliminarSala,
     mejorarMensajeIA,
+    cerrarSesion,
   };
 }
