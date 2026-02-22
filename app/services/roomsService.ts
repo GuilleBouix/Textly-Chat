@@ -52,6 +52,8 @@ export const roomsService = {
       .or(
         `and(participant_1.eq.${userId1},participant_2.eq.${userId2}),and(participant_1.eq.${userId2},participant_2.eq.${userId1})`,
       )
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) {

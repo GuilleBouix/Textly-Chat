@@ -1,7 +1,5 @@
 "use client";
-
 import { useState, useEffect, useCallback } from "react";
-
 import { supabase } from "../../lib/supabaseClient";
 import { debug, debugError } from "../../lib/debug";
 import { friendshipsService } from "../../services/friendshipsService";
@@ -37,10 +35,14 @@ export function useFriendships({
   // ============================================
 
   // Solicitudes de amistad recibidas pendientes
-  const [solicitudesPendientes, setSolicitudesPendientes] = useState<SolicitudPendiente[]>([]);
+  const [solicitudesPendientes, setSolicitudesPendientes] = useState<
+    SolicitudPendiente[]
+  >([]);
 
   // Solicitudes de amistad enviadas pendientes
-  const [solicitudesEnviadas, setSolicitudesEnviadas] = useState<SolicitudPendiente[]>([]);
+  const [solicitudesEnviadas, setSolicitudesEnviadas] = useState<
+    SolicitudPendiente[]
+  >([]);
 
   // ============================================
   // FUNCIONES
@@ -75,7 +77,10 @@ export function useFriendships({
     await authService.getSession();
     await authService.getUser();
 
-    const amistadExistente = await friendshipsService.findFriendship(userId, amigoId);
+    const amistadExistente = await friendshipsService.findFriendship(
+      userId,
+      amigoId,
+    );
 
     if (amistadExistente) {
       debug("friendships.maybeSingle:ok", {
@@ -85,7 +90,10 @@ export function useFriendships({
       });
 
       if (amistadExistente.status === "accepted") {
-        const salaExistente = await roomsService.findRoomByParticipants(userId, amigoId);
+        const salaExistente = await roomsService.findRoomByParticipants(
+          userId,
+          amigoId,
+        );
         if (salaExistente) {
           setIdSalaActiva(salaExistente.id);
           await cargarPerfiles([amigoId]);
@@ -101,10 +109,17 @@ export function useFriendships({
       return;
     }
 
-    const payload = { sender_id: userId, receiver_id: amigoId, status: "pending" as const };
+    const payload = {
+      sender_id: userId,
+      receiver_id: amigoId,
+      status: "pending" as const,
+    };
     debug("friendships.insert:payload", payload);
 
-    const insertedFriendship = await friendshipsService.createFriendship(userId, amigoId);
+    const insertedFriendship = await friendshipsService.createFriendship(
+      userId,
+      amigoId,
+    );
 
     if (!insertedFriendship) {
       throw new Error("Failed to create friendship");
@@ -125,9 +140,16 @@ export function useFriendships({
   const aceptarSolicitud = async (solicitudId: string, emisorId: string) => {
     if (!userId) return;
 
-    debug("aceptarSolicitud:start", { solicitudId, emisorId, receptorId: userId });
+    debug("aceptarSolicitud:start", {
+      solicitudId,
+      emisorId,
+      receptorId: userId,
+    });
 
-    const success = await friendshipsService.acceptFriendship(solicitudId, userId);
+    const success = await friendshipsService.acceptFriendship(
+      solicitudId,
+      userId,
+    );
     if (!success) {
       throw new Error("Failed to accept friendship");
     }
@@ -135,10 +157,15 @@ export function useFriendships({
     const room = await roomsService.createRoom(userId, emisorId);
 
     if (!room) {
-      const fallbackRoom = await roomsService.findRoomByParticipants(userId, emisorId);
+      const fallbackRoom = await roomsService.findRoomByParticipants(
+        userId,
+        emisorId,
+      );
       if (fallbackRoom) {
         setSalas((prev) =>
-          prev.some((sala) => sala.id === fallbackRoom.id) ? prev : [fallbackRoom, ...prev],
+          prev.some((sala) => sala.id === fallbackRoom.id)
+            ? prev
+            : [fallbackRoom, ...prev],
         );
         setIdSalaActiva(fallbackRoom.id);
       }
@@ -160,9 +187,14 @@ export function useFriendships({
   const cancelarSolicitud = async (solicitudId: string) => {
     if (!userId) return;
 
-    const success = await friendshipsService.deleteFriendship(solicitudId, userId);
+    const success = await friendshipsService.deleteFriendship(
+      solicitudId,
+      userId,
+    );
     if (!success) {
-      const customError = new Error("No se pudo cancelar la solicitud (sin permisos o ya no existe).");
+      const customError = new Error(
+        "No se pudo cancelar la solicitud (sin permisos o ya no existe).",
+      );
       debugError("friendships.delete.pending.no-row", customError);
       throw customError;
     }

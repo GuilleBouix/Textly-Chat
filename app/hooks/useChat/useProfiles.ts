@@ -1,17 +1,12 @@
 "use client";
-
 import { useState, useCallback } from "react";
-
 import { profilesService } from "../../services/profilesService";
 import type { PerfilChat } from "../../types/chat";
 import type { PerfilBusqueda } from "../../types/chat";
+import { normalizeAvatarUrl } from "../../lib/avatar";
 
 // ============================================
 // HOOK DE PERFILES
-// ============================================
-
-// ============================================
-// HOOK
 // ============================================
 
 export function useProfiles() {
@@ -53,22 +48,28 @@ export function useProfiles() {
     const authMetadata = await profilesService.getAuthMetadata(ids);
     return users.map((u) => ({
       ...u,
-      avatarUrl: authMetadata[u.id]?.avatarUrl || null,
+      avatarUrl: normalizeAvatarUrl(authMetadata[u.id]?.avatarUrl) || null,
     }));
   };
 
   // Agrega el perfil del usuario actual
-  const agregarPerfilUsuario = useCallback((userId: string, data: { email: string; username: string; avatarUrl: string | null }) => {
-    setPerfiles((prev) => ({
-      ...prev,
-      [userId]: {
-        id: userId,
-        email: data.email,
-        username: data.username,
-        avatarUrl: data.avatarUrl,
-      },
-    }));
-  }, []);
+  const agregarPerfilUsuario = useCallback(
+    (
+      userId: string,
+      data: { email: string; username: string; avatarUrl: string | null },
+    ) => {
+      setPerfiles((prev) => ({
+        ...prev,
+        [userId]: {
+          id: userId,
+          email: data.email,
+          username: data.username,
+          avatarUrl: data.avatarUrl,
+        },
+      }));
+    },
+    [],
+  );
 
   // ============================================
   // RETORNO

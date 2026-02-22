@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { LuSearch, LuUserPlus, LuCheck, LuLoader } from "react-icons/lu";
 import { Perfil } from "../types/database";
+import { normalizeAvatarUrl } from "../lib/avatar";
 
 // ============================================
 // TIPOS
@@ -110,7 +111,7 @@ export default function UserSearch({
             <div className="flex items-center gap-3">
               {user.avatarUrl ? (
                 <img
-                  src={user.avatarUrl}
+                  src={normalizeAvatarUrl(user.avatarUrl) || user.avatarUrl}
                   alt={user.username || "Usuario"}
                   className="h-10 w-10 rounded-full border border-zinc-700 object-cover"
                 />

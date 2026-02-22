@@ -5,9 +5,23 @@ import type { PerfilChat, SolicitudPendiente, PerfilBusqueda } from "../../types
 // TIPOS PARA LOS HOOKS DEL CHAT
 // ============================================
 
+// Modo de redaccion
+export type ModoRedaccion = "formal" | "informal";
+
+// Idioma para la IA
+export type IdiomaIA = "es" | "en" | "pt";
+
+// Configuracion de IA del usuario
+export interface ConfigIA {
+  asistenteActivo: boolean;
+  modoRedaccion: ModoRedaccion;
+  idioma: IdiomaIA;
+}
+
 // Estado del usuario autenticado
 export interface UseAuthState {
   usuario: UsuarioSupabase | null;
+  refreshUsuario: () => Promise<void>;
 }
 
 // Estado de las salas
@@ -42,6 +56,7 @@ export interface UseChatActions {
   enviarMensaje: (e: React.FormEvent) => Promise<void>;
   eliminarSala: (idSala: string) => Promise<void>;
   mejorarMensajeIA: () => Promise<void>;
+  traducirMensajeIA: () => Promise<void>;
   buscarUsuarios: (username: string) => Promise<PerfilBusqueda[]>;
   buscarPorUsername: (username: string) => Promise<PerfilBusqueda[]>;
   agregarAmigo: (amigoId: string) => Promise<void>;
@@ -49,11 +64,14 @@ export interface UseChatActions {
   aceptarSolicitud: (solicitudId: string, emisorId: string) => Promise<void>;
   cancelarSolicitud: (solicitudId: string) => Promise<void>;
   marcarChatComoLeido: (idSala: string) => void;
+  actualizarConfigIA: (config: Partial<ConfigIA>) => Promise<void>;
 }
 
 // Estado de carga de IA
 export interface UseIAState {
   cargandoIA: boolean;
+  accionIAActiva: "improve" | "translate" | null;
+  configIA: ConfigIA;
 }
 
 // Tipo completo del hook

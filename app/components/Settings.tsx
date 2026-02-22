@@ -1,0 +1,170 @@
+"use client";
+
+import { useState } from "react";
+import { LuCheck, LuSparkles, LuX } from "react-icons/lu";
+
+type ModoRedaccion = "formal" | "informal";
+type Idioma = "es" | "en" | "pt";
+
+interface SettingsProps {
+  abierto: boolean;
+  alCerrar: () => void;
+  configIA: {
+    asistenteActivo: boolean;
+    modoRedaccion: ModoRedaccion;
+    idioma: Idioma;
+  };
+  alActualizarConfigIA: (config: {
+    asistenteActivo?: boolean;
+    modoRedaccion?: ModoRedaccion;
+    idioma?: Idioma;
+  }) => Promise<void>;
+}
+
+export default function Settings({
+  abierto,
+  alCerrar,
+  configIA,
+  alActualizarConfigIA,
+}: SettingsProps) {
+  const [asistenteActivo, setAsistenteActivo] = useState(
+    configIA.asistenteActivo,
+  );
+  const [modoRedaccion, setModoRedaccion] = useState<ModoRedaccion>(
+    configIA.modoRedaccion,
+  );
+  const [idioma, setIdioma] = useState<Idioma>(configIA.idioma);
+  const [guardandoIA, setGuardandoIA] = useState(false);
+
+  if (!abierto) return null;
+
+  const handleGuardarIA = async () => {
+    setGuardandoIA(true);
+    try {
+      await alActualizarConfigIA({
+        asistenteActivo,
+        modoRedaccion,
+        idioma,
+      });
+      alCerrar();
+    } catch (error) {
+      console.error("Error guardando config IA:", error);
+      alert("No se pudo guardar la configuracion.");
+    } finally {
+      setGuardandoIA(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm">
+      <div className="flex h-[520px] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-zinc-800 p-4">
+          <h2 className="text-lg font-bold text-white">Asistente IA</h2>
+          <button
+            onClick={alCerrar}
+            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+          >
+            <LuX size={20} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-hidden p-4">
+          <div className="space-y-5">
+            <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/50 p-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                    asistenteActivo ? "bg-blue-600" : "bg-zinc-800"
+                  }`}
+                >
+                  <LuSparkles
+                    size={20}
+                    className={asistenteActivo ? "text-white" : "text-zinc-500"}
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">Asistente de IA</p>
+                  <p className="text-xs text-zinc-500">
+                    Mejora tus mensajes automaticamente
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAsistenteActivo(!asistenteActivo)}
+                className={`relative h-6 w-11 rounded-full transition-colors ${
+                  asistenteActivo ? "bg-blue-600" : "bg-zinc-700"
+                }`}
+              >
+                <span
+                  className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${
+                    asistenteActivo ? "left-6" : "left-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-medium text-zinc-400">
+                Modo de redaccion
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setModoRedaccion("formal")}
+                  className={`rounded-xl border p-3 text-sm font-medium transition-colors ${
+                    modoRedaccion === "formal"
+                      ? "border-blue-500 bg-blue-600/20 text-blue-400"
+                      : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-zinc-600"
+                  }`}
+                >
+                  Formal
+                </button>
+                <button
+                  onClick={() => setModoRedaccion("informal")}
+                  className={`rounded-xl border p-3 text-sm font-medium transition-colors ${
+                    modoRedaccion === "informal"
+                      ? "border-blue-500 bg-blue-600/20 text-blue-400"
+                      : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-zinc-600"
+                  }`}
+                >
+                  Informal
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-medium text-zinc-400">
+                Idioma de traduccion
+              </label>
+              <select
+                value={idioma}
+                onChange={(e) => setIdioma(e.target.value as Idioma)}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-sm text-white outline-none focus:border-blue-500"
+              >
+                <option value="es">Español</option>
+                <option value="en">Ingles</option>
+                <option value="pt">Portugues</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 border-t border-zinc-800 p-4">
+          <button
+            onClick={alCerrar}
+            className="flex-1 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleGuardarIA}
+            disabled={guardandoIA}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+          >
+            {guardandoIA ? "Guardando..." : "Guardar"}
+            <LuCheck size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,7 +1,5 @@
 "use client";
-
 import { useState, useEffect, useCallback } from "react";
-
 import { supabase } from "../../lib/supabaseClient";
 import { roomsService } from "../../services/roomsService";
 import type { Sala } from "../../types/database";
@@ -63,7 +61,9 @@ export function useRooms({ userId, cargarPerfiles }: UseRoomsProps) {
   // Agrega una sala al estado
   const agregarSala = (nuevaSala: Sala) => {
     setSalas((prev) =>
-      prev.some((sala) => sala.id === nuevaSala.id) ? prev : [nuevaSala, ...prev],
+      prev.some((sala) => sala.id === nuevaSala.id)
+        ? prev
+        : [nuevaSala, ...prev],
     );
     setIdSalaActiva((prev) => prev ?? nuevaSala.id);
   };
@@ -90,12 +90,17 @@ export function useRooms({ userId, cargarPerfiles }: UseRoomsProps) {
         { event: "INSERT", schema: "public", table: "rooms" },
         (payload) => {
           const nuevaSala = payload.new as Sala;
-          const participa = nuevaSala.participant_1 === userId || nuevaSala.participant_2 === userId;
+          const participa =
+            nuevaSala.participant_1 === userId ||
+            nuevaSala.participant_2 === userId;
           if (!participa) return;
 
           agregarSala(nuevaSala);
 
-          const idContacto = nuevaSala.participant_1 === userId ? nuevaSala.participant_2 : nuevaSala.participant_1;
+          const idContacto =
+            nuevaSala.participant_1 === userId
+              ? nuevaSala.participant_2
+              : nuevaSala.participant_1;
           void cargarPerfiles([idContacto]);
         },
       )

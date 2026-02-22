@@ -1,6 +1,9 @@
 "use client";
-import { LuCheck, LuLogOut, LuUserPlus, LuUsers } from "react-icons/lu";
+
+import { LuCheck, LuLogOut, LuUserPlus, LuUsers, LuSettings } from "react-icons/lu";
+
 import { Sala, UsuarioSupabase } from "../types/database";
+import { normalizeAvatarUrl } from "../lib/avatar";
 
 // ============================================
 // TIPOS
@@ -35,6 +38,7 @@ interface SidebarProps {
   alAceptarSolicitud: (solicitudId: string, emisorId: string) => Promise<void>;
   alCancelarSolicitud: (solicitudId: string) => Promise<void>;
   abrirModalBuscar: () => void;
+  abrirSettings: () => void;
   alCerrarSesion: () => void;
 }
 
@@ -55,8 +59,27 @@ export default function Sidebar({
   alAceptarSolicitud,
   alCancelarSolicitud,
   abrirModalBuscar,
+  abrirSettings,
   alCerrarSesion,
 }: SidebarProps) {
+  const userMeta = (usuario?.user_metadata ?? {}) as Record<string, unknown>;
+  const fullName = typeof userMeta.full_name === "string" ? userMeta.full_name : null;
+  const genericName = typeof userMeta.name === "string" ? userMeta.name : null;
+  const metaAvatar =
+    (typeof userMeta.avatar_url === "string" && userMeta.avatar_url) ||
+    (typeof userMeta.picture === "string" && userMeta.picture) ||
+    (typeof userMeta.picture_url === "string" && userMeta.picture_url) ||
+    (typeof userMeta.photoURL === "string" && userMeta.photoURL) ||
+    null;
+
+  const nombrePropio =
+    fullName ||
+    genericName ||
+    usuario?.email?.split("@")[0] ||
+    "Usuario";
+  const avatarPropio =
+    normalizeAvatarUrl(metaAvatar) ||
+    `https://ui-avatars.com/api/?name=${usuario?.email || "U"}`;
   // ============================================
   // RENDERIZADO
   // ============================================
@@ -66,28 +89,39 @@ export default function Sidebar({
       <div className="flex items-center gap-3 border-b border-zinc-900 bg-zinc-900/20 p-5">
         {/* Avatar del usuario */}
         <img
-          src={
-            usuario?.user_metadata?.avatar_url ||
-            `https://ui-avatars.com/api/?name=${usuario?.email}`
-          }
+          src={avatarPropio}
           className="h-10 w-10 rounded-full border border-zinc-800"
           alt="Mi avatar"
         />
+
         {/* Nombre y estado */}
         <div className="flex-1 overflow-hidden">
           <p className="truncate text-sm font-bold text-zinc-100">
-            {usuario?.user_metadata?.full_name || usuario?.email?.split("@")[0]}
+            {nombrePropio}
           </p>
-          <p className="truncate text-[10px] text-zinc-500">En linea</p>
+          <p className="truncate text-[10px] text-emerald-500/80">En línea</p>
         </div>
-        {/* Boton cerrar sesion */}
-        <button
-          onClick={alCerrarSesion}
-          className="rounded-lg p-2 text-zinc-500 transition-colors hover:bg-red-400/10 hover:text-red-400"
-          title="Cerrar sesion"
-        >
-          <LuLogOut size={18} />
-        </button>
+
+        {/* Botones de accion */}
+        <div className="flex items-center gap-1">
+          {/* Boton settings */}
+          <button
+            onClick={abrirSettings}
+            className="rounded-lg p-2 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+            title="Configuracion"
+          >
+            <LuSettings size={18} />
+          </button>
+
+          {/* Boton cerrar sesion */}
+          <button
+            onClick={alCerrarSesion}
+            className="rounded-lg p-2 text-zinc-500 transition-colors hover:bg-red-400/10 hover:text-red-400"
+            title="Cerrar sesion"
+          >
+            <LuLogOut size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Boton para buscar contactos */}
@@ -117,9 +151,11 @@ export default function Sidebar({
               solicitud.profiles?.[0]?.username ||
               perfiles[solicitud.sender_id]?.username ||
               "Usuario";
+
             const avatar =
-              perfiles[solicitud.sender_id]?.avatarUrl ||
+              normalizeAvatarUrl(perfiles[solicitud.sender_id]?.avatarUrl) ||
               `https://ui-avatars.com/api/?name=${nombre}`;
+
             return (
               <div
                 key={solicitud.id}
@@ -131,8 +167,10 @@ export default function Sidebar({
                     className="h-8 w-8 rounded-full border border-zinc-800 object-cover"
                     alt={nombre}
                   />
+
                   <p className="truncate text-xs text-zinc-200">{nombre}</p>
                 </div>
+
                 <button
                   onClick={() =>
                     alAceptarSolicitud(solicitud.id, solicitud.sender_id)
@@ -152,9 +190,11 @@ export default function Sidebar({
               solicitud.profiles?.[0]?.username ||
               perfiles[solicitud.receiver_id]?.username ||
               "Usuario";
+
             const avatar =
-              perfiles[solicitud.receiver_id]?.avatarUrl ||
+              normalizeAvatarUrl(perfiles[solicitud.receiver_id]?.avatarUrl) ||
               `https://ui-avatars.com/api/?name=${nombre}`;
+
             return (
               <div
                 key={solicitud.id}
@@ -166,13 +206,16 @@ export default function Sidebar({
                     className="h-8 w-8 rounded-full border border-zinc-800 object-cover"
                     alt={nombre}
                   />
+
                   <div className="min-w-0">
                     <p className="truncate text-xs text-zinc-200">{nombre}</p>
+
                     <p className="text-[10px] uppercase tracking-wide text-zinc-500">
                       Pendiente
                     </p>
                   </div>
                 </div>
+
                 <button
                   onClick={async () => {
                     try {
@@ -213,7 +256,9 @@ export default function Sidebar({
               sala.participant_1 === usuario?.id
                 ? sala.participant_2
                 : sala.participant_1;
+
             const amigo = perfiles[idAmigo];
+
             const unread = mensajesNoLeidos[sala.id] || 0;
 
             return (
@@ -230,12 +275,13 @@ export default function Sidebar({
                 <div className="relative">
                   <img
                     src={
-                      amigo?.avatarUrl ||
+                      normalizeAvatarUrl(amigo?.avatarUrl) ||
                       `https://ui-avatars.com/api/?name=${amigo?.username || "?"}&background=random`
                     }
                     className="h-11 w-11 rounded-full border border-zinc-800 object-cover"
                     alt="avatar"
                   />
+
                   <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-zinc-950 bg-green-500" />
                 </div>
 
@@ -260,6 +306,7 @@ export default function Sidebar({
                       </span>
                     )}
                   </div>
+
                   <p className="truncate text-xs text-zinc-500">
                     Haz clic para chatear
                   </p>
@@ -296,3 +343,5 @@ export default function Sidebar({
     </aside>
   );
 }
+
+

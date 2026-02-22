@@ -1,7 +1,5 @@
 "use client";
-
 import { useState, useEffect } from "react";
-
 import { supabase } from "../../lib/supabaseClient";
 import { debugError } from "../../lib/debug";
 import { messagesService } from "../../services/messagesService";
@@ -23,7 +21,12 @@ interface UseMessagesProps {
 // HOOK
 // ============================================
 
-export function useMessages({ userId, idSalaActiva, salas, cargarPerfiles }: UseMessagesProps) {
+export function useMessages({
+  userId,
+  idSalaActiva,
+  salas,
+  cargarPerfiles,
+}: UseMessagesProps) {
   // ============================================
   // ESTADOS
   // ============================================
@@ -35,7 +38,9 @@ export function useMessages({ userId, idSalaActiva, salas, cargarPerfiles }: Use
   const [nuevoMensaje, setNuevoMensaje] = useState("");
 
   // Contador de mensajes no leidos por sala
-  const [mensajesNoLeidos, setMensajesNoLeidos] = useState<Record<string, number>>({});
+  const [mensajesNoLeidos, setMensajesNoLeidos] = useState<
+    Record<string, number>
+  >({});
 
   // ============================================
   // FUNCIONES
@@ -55,7 +60,11 @@ export function useMessages({ userId, idSalaActiva, salas, cargarPerfiles }: Use
     e.preventDefault();
     if (!nuevoMensaje.trim() || !userId || !idSalaActiva) return;
 
-    const insertedMessage = await messagesService.createMessage(idSalaActiva, userId, nuevoMensaje);
+    const insertedMessage = await messagesService.createMessage(
+      idSalaActiva,
+      userId,
+      nuevoMensaje,
+    );
 
     if (!insertedMessage) {
       debugError("messages.insert", new Error("Failed to send message"));
@@ -64,7 +73,9 @@ export function useMessages({ userId, idSalaActiva, salas, cargarPerfiles }: Use
     }
 
     setMensajes((prev) =>
-      prev.some((msg) => msg.id === insertedMessage.id) ? prev : [...prev, insertedMessage],
+      prev.some((msg) => msg.id === insertedMessage.id)
+        ? prev
+        : [...prev, insertedMessage],
     );
     void cargarPerfiles([insertedMessage.sender_id]);
 
@@ -108,7 +119,9 @@ export function useMessages({ userId, idSalaActiva, salas, cargarPerfiles }: Use
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
           const nuevoMensaje = payload.new as Mensaje;
-          const salaExiste = salas.some((sala) => sala.id === nuevoMensaje.room_id);
+          const salaExiste = salas.some(
+            (sala) => sala.id === nuevoMensaje.room_id,
+          );
           if (!salaExiste) return;
 
           if (nuevoMensaje.room_id === idSalaActiva) {

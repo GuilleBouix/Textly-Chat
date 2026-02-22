@@ -1,6 +1,7 @@
 import type { Perfil } from "../types/database";
 import type { AuthMetaUser, PerfilChat, PerfilBusqueda } from "../types/chat";
 import { debugError } from "../lib/debug";
+import { normalizeAvatarUrl } from "../lib/avatar";
 
 // ============================================
 // SERVICIO DE PERFILES
@@ -53,7 +54,10 @@ export const profilesService = {
 
       return users.reduce(
         (acc, user) => {
-          acc[user.id] = user;
+          acc[user.id] = {
+            ...user,
+            avatarUrl: normalizeAvatarUrl(user.avatarUrl) || null,
+          };
           return acc;
         },
         {} as Record<string, AuthMetaUser>,
@@ -102,7 +106,10 @@ export const profilesService = {
         acc[perfil.id] = {
           ...perfil,
           username: perfil.username || auth?.nombre || "Usuario",
-          avatarUrl: auth?.avatarUrl || perfil.avatarUrl || null,
+          avatarUrl:
+            normalizeAvatarUrl(auth?.avatarUrl) ||
+            normalizeAvatarUrl(perfil.avatarUrl) ||
+            null,
         };
         return acc;
       },

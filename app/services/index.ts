@@ -7,3 +7,4 @@ export { roomsService } from "./roomsService";
 export { messagesService } from "./messagesService";
 export { friendshipsService } from "./friendshipsService";
 export { profilesService } from "./profilesService";
+export { settingsService } from "./settingsService";

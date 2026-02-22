@@ -1,7 +1,5 @@
 "use client";
-
 import { useState, useEffect } from "react";
-
 import { authService } from "../../services/authService";
 import type { UsuarioSupabase } from "../../types/database";
 
@@ -45,6 +43,12 @@ export function useAuth() {
     return await authService.getCurrentUser();
   };
 
+  // Refresca los datos del usuario
+  const refreshUsuario = async () => {
+    const user = await authService.getCurrentUser();
+    setUsuario(user);
+  };
+
   // ============================================
   // RETORNO
   // ============================================
@@ -54,5 +58,6 @@ export function useAuth() {
     setUsuario,
     cerrarSesion,
     obtenerUsuarioActual,
+    refreshUsuario,
   };
 }

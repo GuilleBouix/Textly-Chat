@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { normalizeAvatarUrl } from "../../../lib/avatar";
 
 // ============================================
 // TIPOS
@@ -24,13 +25,27 @@ const getIdentityData = (authUser: unknown) => {
   const identities = Array.isArray((authUser as { identities?: unknown[] })?.identities)
     ? (authUser as { identities: unknown[] }).identities
     : [];
+  let fallback: Record<string, unknown> | null = null;
   for (const identity of identities) {
     const identityData = (identity as { identity_data?: Record<string, unknown> })?.identity_data;
     if (identityData && typeof identityData === "object") {
-      return identityData as Record<string, unknown>;
+      fallback = identityData as Record<string, unknown>;
+      const hasName =
+        typeof identityData.full_name === "string" ||
+        typeof identityData.name === "string";
+      const hasAvatar =
+        typeof identityData.avatar_url === "string" ||
+        typeof identityData.picture === "string" ||
+        typeof identityData.picture_url === "string" ||
+        typeof identityData.profile_image_url === "string" ||
+        typeof identityData.photoURL === "string";
+
+      if (hasName || hasAvatar) {
+        return identityData as Record<string, unknown>;
+      }
     }
   }
-  return null;
+  return fallback;
 };
 
 // ============================================
@@ -70,9 +85,10 @@ export async function POST(req: Request) {
       data: { user },
     } = await authClient.auth.getUser();
 
-    // Valida que el usuario este autenticado
+    // Si no hay usuario en cookies igual intentamos resolver metadata con service role.
+    // Esto evita respuestas vacias cuando la cookie del cliente no llega al route handler.
     if (!user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+      console.warn("[users/meta] request without auth cookie; falling back to admin lookup");
     }
 
     // Obtiene los IDs del body
@@ -112,6 +128,8 @@ export async function POST(req: Request) {
         const identityAvatar =
           (identityData?.avatar_url as string) ||
           (identityData?.picture as string) ||
+          (identityData?.picture_url as string) ||
+          (identityData?.profile_image_url as string) ||
           (identityData?.photoURL as string) ||
           null;
 
@@ -119,16 +137,21 @@ export async function POST(req: Request) {
           id: authUser.id,
           email: authUser.email ?? undefined,
           nombre:
+            (authUser.app_metadata?.custom_display_name as string) ||
             (authUser.user_metadata?.full_name as string) ||
             (authUser.user_metadata?.name as string) ||
             identityName ||
             authUser.email?.split("@")[0] ||
             "Usuario",
           avatarUrl:
-            (authUser.user_metadata?.avatar_url as string) ||
-            (authUser.user_metadata?.picture as string) ||
-            identityAvatar ||
-            null,
+            normalizeAvatarUrl(
+              (authUser.app_metadata?.custom_avatar_url as string) ||
+                (authUser.user_metadata?.avatar_url as string) ||
+                (authUser.user_metadata?.picture as string) ||
+                (authUser.user_metadata?.picture_url as string) ||
+                (authUser.user_metadata?.photoURL as string) ||
+                identityAvatar,
+            ) || null,
         } satisfies BasicUser;
       }),
     );

@@ -5,19 +5,71 @@ import { NextResponse } from "next/server";
 // CONFIGURACION
 // ============================================
 
-// Clave API de Gemini
 const apiKey = process.env.GEMINI_API_KEY;
-
-// Nombre del modelo a usar
 const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 // ============================================
-// RUTA POST - Mejorar texto con IA
+// TIPOS
+// ============================================
+
+type ModoRedaccion = "formal" | "informal";
+type Idioma = "es" | "en" | "pt";
+type AccionIA = "improve" | "translate";
+
+// ============================================
+// FUNCIONES AUXILIARES
+// ============================================
+
+function generarPrompt(
+  text: string,
+  modo: ModoRedaccion,
+  idioma: Idioma,
+  accion: AccionIA,
+): string {
+  const idiomaTexto: Record<Idioma, string> = {
+    es: "en espanol",
+    en: "in English",
+    pt: "em portugues",
+  };
+
+  const tonoDescripcion =
+    modo === "formal"
+      ? "Usa un tono profesional, cortés y formal."
+      : "Usa un tono casual, amigable y natural.";
+
+  if (accion === "translate") {
+    return `Traduce el siguiente mensaje de chat ${idiomaTexto[idioma]}.
+${tonoDescripcion}
+Reglas:
+- Mantiene el mismo significado e intencion.
+- Ajusta la redaccion al tono solicitado.
+- No agregues informacion nueva.
+- No expliques nada.
+- Devuelve SOLO el texto final traducido, sin comillas ni comentarios.
+
+Mensaje:
+${text}`;
+  }
+
+  return `Mejora el siguiente mensaje de chat ${idiomaTexto[idioma]}.
+${tonoDescripcion}
+Reglas:
+- Mantiene el mismo significado e intencion.
+- Corrige redaccion, claridad y ortografia.
+- No agregues informacion nueva.
+- No expliques nada.
+- Devuelve SOLO el texto final, sin comillas ni comentarios.
+
+Mensaje:
+${text}`;
+}
+
+// ============================================
+// RUTA POST
 // ============================================
 
 export async function POST(req: Request) {
   try {
-    // Valida que exista la API key
     if (!apiKey) {
       return NextResponse.json(
         { error: "Falta GEMINI_API_KEY en variables de entorno" },
@@ -25,42 +77,31 @@ export async function POST(req: Request) {
       );
     }
 
-    // Obtiene el texto del body
     const body = await req.json();
-    const textToImprove = body?.text;
+    const text = body?.text;
+    const modo: ModoRedaccion = body?.modo || "informal";
+    const idioma: Idioma = body?.idioma || "es";
+    const accion: AccionIA = body?.accion === "translate" ? "translate" : "improve";
 
-    // Valida que el texto sea valido
-    if (!textToImprove || typeof textToImprove !== "string") {
+    if (!text || typeof text !== "string") {
       return NextResponse.json(
         { error: "No se recibio texto valido" },
         { status: 400 },
       );
     }
 
-    // Inicializa el modelo de Gemini
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: modelName });
+    const prompt = generarPrompt(text, modo, idioma, accion);
 
-    // Prompt con instrucciones para mejorar el mensaje
-    const prompt = `Mejora el siguiente mensaje de chat.
-      Reglas:
-      - Manten el mismo significado e intencion.
-      - Corrige redaccion, claridad y ortografia.
-      - Conserva un tono casual y natural.
-      - No agregues informacion nueva.
-      - No expliques nada.
-      - Devuelve SOLO el texto final, sin comillas ni comentarios.
-
-      Mensaje:
-      ${textToImprove}
-    `;
-
-    // Genera el contenido mejorado
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const output = response.text();
 
-    return NextResponse.json({ improvedText: output?.trim() || "" });
+    return NextResponse.json({
+      improvedText: output?.trim() || "",
+      accion,
+    });
   } catch (error: unknown) {
     const err = error as { message?: string; status?: number; statusText?: string };
     const message = err?.message || "Error interno en la IA";
@@ -72,7 +113,6 @@ export async function POST(req: Request) {
       statusText: err?.statusText,
     });
 
-    // Verifica si el modelo no esta disponible
     const isModelNotFound =
       typeof message === "string" &&
       message.includes("is not found for API version") &&
