@@ -1,3 +1,8 @@
+// ============================================
+// TIPOS DE BASE DE DATOS
+// ============================================
+
+// Tipo para el usuario autenticado de Supabase
 export interface UsuarioSupabase {
   id: string;
   email?: string;
@@ -8,6 +13,7 @@ export interface UsuarioSupabase {
   };
 }
 
+// Tipo para el perfil publico de un usuario
 export interface Perfil {
   id: string;
   email: string;
@@ -15,6 +21,7 @@ export interface Perfil {
   created_at: string;
 }
 
+// Tipo para los mensajes del chat
 export interface Mensaje {
   id: string;
   created_at: string;
@@ -23,6 +30,7 @@ export interface Mensaje {
   room_id: string;
 }
 
+// Tipo para las salas de chat
 export interface Sala {
   id: string;
   created_at: string;
@@ -30,6 +38,7 @@ export interface Sala {
   participant_2: string;
 }
 
+// Tipo para las relaciones de amistad
 export interface Amistad {
   id: string;
   sender_id: string;

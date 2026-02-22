@@ -1,24 +1,49 @@
 "use client";
+
 import { useState } from "react";
+
 import { LuSearch, LuUserPlus, LuCheck, LuLoader } from "react-icons/lu";
 import { Perfil } from "../types/database";
 
+// ============================================
+// TIPOS
+// ============================================
+
+type UsuarioBusqueda = Perfil & {
+  avatarUrl?: string | null;
+};
+
+// ============================================
+// PROPS
+// ============================================
+
 interface BuscadorProps {
-  onBuscar: (username: string) => Promise<Perfil[]>;
+  onBuscar: (username: string) => Promise<UsuarioBusqueda[]>;
   onAgregar: (id: string) => Promise<void>;
   alCerrar: () => void;
 }
+
+// ============================================
+// COMPONENTE DE BUSQUEDA DE USUARIOS
+// ============================================
 
 export default function UserSearch({
   onBuscar,
   onAgregar,
   alCerrar,
 }: BuscadorProps) {
+  // ============================================
+  // ESTADOS
+  // ============================================
   const [query, setQuery] = useState("");
-  const [resultados, setResultados] = useState<Perfil[]>([]);
+  const [resultados, setResultados] = useState<UsuarioBusqueda[]>([]);
   const [agregados, setAgregados] = useState<string[]>([]);
   const [buscando, setBuscando] = useState(false);
+  const [aviso, setAviso] = useState("");
 
+  // ============================================
+  // FUNCIONES
+  // ============================================
   const ejecutarBusqueda = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -34,6 +59,8 @@ export default function UserSearch({
       console.log("[chat-debug] UserSearch.manejarAgregar:start", { id });
       await onAgregar(id);
       setAgregados([...agregados, id]);
+      setAviso("Solicitud enviada");
+      setTimeout(() => setAviso(""), 1800);
       console.log("[chat-debug] UserSearch.manejarAgregar:ok", { id });
     } catch (error) {
       console.error("[chat-debug] UserSearch.manejarAgregar:error", error);
@@ -41,9 +68,12 @@ export default function UserSearch({
     }
   };
 
+  // ============================================
+  // RENDERIZADO
+  // ============================================
   return (
     <div className="flex flex-col gap-4">
-      {/* Input de Búsqueda */}
+      {/* Input de busqueda */}
       <form onSubmit={ejecutarBusqueda} className="relative">
         <input
           autoFocus
@@ -61,17 +91,34 @@ export default function UserSearch({
         )}
       </form>
 
-      {/* Resultados */}
+      {/* Resultados de la busqueda */}
       <div className="space-y-2 max-h-75 overflow-y-auto pr-2 custom-scrollbar">
+        {/* Aviso de solicitud enviada */}
+        {aviso && (
+          <div className="rounded-xl border border-green-600/30 bg-green-600/10 px-3 py-2 text-xs font-medium text-green-400">
+            {aviso}
+          </div>
+        )}
+
+        {/* Lista de usuarios encontrados */}
         {resultados.map((user) => (
           <div
             key={user.id}
             className="flex items-center justify-between p-3 bg-zinc-900/40 rounded-xl border border-zinc-800/50 hover:bg-zinc-900 transition-colors"
           >
+            {/* Avatar y nombre del usuario */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-blue-400 border border-zinc-700">
-                {user.username?.charAt(0).toUpperCase()}
-              </div>
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.username || "Usuario"}
+                  className="h-10 w-10 rounded-full border border-zinc-700 object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-blue-400 border border-zinc-700">
+                  {user.username?.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div>
                 <p className="text-sm font-bold text-zinc-100">
                   {user.username}
@@ -80,6 +127,7 @@ export default function UserSearch({
               </div>
             </div>
 
+            {/* Boton de accion (agregado o agregar) */}
             {agregados.includes(user.id) ? (
               <div className="flex items-center gap-1 text-green-500 text-xs font-medium px-3 py-1.5 bg-green-500/10 rounded-lg">
                 <LuCheck size={16} /> Agregado
@@ -90,15 +138,16 @@ export default function UserSearch({
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white text-xs font-bold transition-all active:scale-95"
               >
                 <LuUserPlus size={16} />
-                Solicitar
+                Agregar
               </button>
             )}
           </div>
         ))}
 
+        {/* Mensaje cuando no se encuentran resultados */}
         {resultados.length === 0 && query && !buscando && (
           <div className="text-center py-8">
-            <p className="text-zinc-500 text-sm">No se encontró a "{query}"</p>
+            <p className="text-zinc-500 text-sm">No se encontro a {query}</p>
             <p className="text-zinc-700 text-[10px] uppercase mt-1">
               Verifica que el nombre sea exacto
             </p>

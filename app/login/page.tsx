@@ -1,28 +1,42 @@
 "use client";
+
 import { supabase } from "../lib/supabaseClient";
 
+// ============================================
+// COMPONENTE DE LOGIN
+// ============================================
+
 export default function LoginPage() {
+  // ============================================
+  // FUNCIONES
+  // ============================================
   const manejarLoginGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        // Supabase usará automáticamente el Site URL configurado o esta:
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     if (error) console.error("Error al iniciar sesión:", error.message);
   };
 
+  // ============================================
+  // RENDERIZADO
+  // ============================================
   return (
     <main className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+      {/* Fondo con efectos de gradiente */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-36 left-1/2 h-112 w-md -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
         <div className="absolute bottom-0 left-1/4 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
         <div className="absolute right-1/4 top-1/3 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
       </div>
 
+      {/* Contenedor principal centrado */}
       <section className="relative mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
+        {/* Tarjeta de login */}
         <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl sm:max-w-md sm:p-10">
+          {/* Encabezado */}
           <div className="mb-8 space-y-4 text-center">
             <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium tracking-wide text-slate-200">
               Bienvenido a Textly
@@ -36,10 +50,12 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* Boton de login con Google */}
           <button
             onClick={manejarLoginGoogle}
             className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-semibold text-slate-900 transition hover:scale-[1.01] hover:bg-slate-100 active:scale-[0.99]"
           >
+            {/* Icono de Google */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 48 48"
@@ -66,6 +82,7 @@ export default function LoginPage() {
             <span>Continuar con Google</span>
           </button>
 
+          {/* Nota legal */}
           <p className="mt-5 text-center text-xs text-slate-400">
             Al continuar aceptas nuestros terminos y politicas de privacidad.
           </p>

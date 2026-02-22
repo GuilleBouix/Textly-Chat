@@ -1,10 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { LuMenu, LuSparkles, LuUser } from "react-icons/lu";
+
 import Modal from "./components/Modal";
 import Sidebar from "./components/Sidebar";
 import UserSearch from "./components/UserSearch";
 import { useChat } from "./hooks/useChat";
+
+// ============================================
+// UTILIDADES
+// ============================================
 
 const formatearHora = (fechaISO: string) => {
   const fecha = new Date(fechaISO);
@@ -16,7 +21,14 @@ const formatearHora = (fechaISO: string) => {
   });
 };
 
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
+
 export default function ChatPage() {
+  // ============================================
+  // ESTADOS DEL HOOK (datos del chat)
+  // ============================================
   const {
     usuario,
     salas,
@@ -32,31 +44,55 @@ export default function ChatPage() {
     cerrarSesion,
     perfiles,
     solicitudesPendientes,
+    solicitudesEnviadas,
+    mensajesNoLeidos,
     buscarUsuarios,
     agregarAmigo,
     aceptarSolicitud,
+    cancelarSolicitud,
+    marcarChatComoLeido,
   } = useChat();
 
+  // ============================================
+  // ESTADOS LOCALES (UI)
+  // ============================================
   const [mostrarModalBuscar, setMostrarModalBuscar] = useState(false);
+
   const [idSalaAEliminar, setIdSalaAEliminar] = useState<string | null>(null);
+
   const [sidebarMobileAbierto, setSidebarMobileAbierto] = useState(false);
 
+  // ============================================
+  // REFERENCES
+  // ============================================
   const finMensajesRef = useRef<HTMLDivElement | null>(null);
 
+  // ============================================
+  // EFECTOS
+  // ============================================
   useEffect(() => {
     finMensajesRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensajes]);
 
+  // ============================================
+  // VARIABLES COMPUTADAS
+  // ============================================
   const salaActual = salas.find((s) => s.id === idSalaActiva);
+
   const idAmigo = salaActual
     ? salaActual.participant_1 === usuario?.id
       ? salaActual.participant_2
       : salaActual.participant_1
     : null;
+
   const perfilAmigo = idAmigo ? perfiles[idAmigo] : null;
 
+  // ============================================
+  // RENDERIZADO
+  // ============================================
   return (
     <div className="flex h-screen overflow-hidden bg-zinc-950 font-sans text-zinc-100">
+      {/* Overlay oscuro para cerrar sidebar en mobile */}
       {sidebarMobileAbierto && (
         <div
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
@@ -64,33 +100,44 @@ export default function ChatPage() {
         />
       )}
 
+      {/* Componente Sidebar con todas las secciones */}
       <Sidebar
         usuario={usuario}
         salas={salas}
         idSalaActiva={idSalaActiva || ""}
         perfiles={perfiles}
         solicitudesPendientes={solicitudesPendientes}
+        solicitudesEnviadas={solicitudesEnviadas}
+        mensajesNoLeidos={mensajesNoLeidos}
         alSeleccionarSala={(id) => {
           setIdSalaActiva(id);
+          marcarChatComoLeido(id);
           setSidebarMobileAbierto(false);
         }}
         alEliminarSala={setIdSalaAEliminar}
         alAceptarSolicitud={aceptarSolicitud}
+        alCancelarSolicitud={cancelarSolicitud}
         abrirModalBuscar={() => setMostrarModalBuscar(true)}
         alCerrarSesion={cerrarSesion}
       />
 
+      {/* Area principal del chat */}
       <section className="relative flex min-w-0 flex-1 flex-col bg-zinc-950">
+        {/* Si hay una sala activa, mostrar el chat */}
         {idSalaActiva ? (
           <>
+            {/* Header con informacion del contacto */}
             <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950/50 p-3 backdrop-blur-md sm:p-4">
               <div className="flex items-center gap-3">
+                {/* Boton menu mobile */}
                 <button
                   className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 md:hidden"
                   onClick={() => setSidebarMobileAbierto(true)}
                 >
                   <LuMenu />
                 </button>
+
+                {/* Avatar y nombre del contacto */}
                 <div className="flex items-center gap-3">
                   {perfilAmigo?.avatarUrl ? (
                     <img
@@ -100,17 +147,24 @@ export default function ChatPage() {
                     />
                   ) : (
                     <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-500/30 bg-blue-600/20 font-bold text-blue-400">
-                      {perfilAmigo?.username?.charAt(0).toUpperCase() || <LuUser />}
+                      {perfilAmigo?.username?.charAt(0).toUpperCase() || (
+                        <LuUser />
+                      )}
                     </div>
                   )}
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">Chat con</p>
-                    <h2 className="text-sm font-bold text-zinc-100">{perfilAmigo?.username || "Cargando..."}</h2>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">
+                      Chat con
+                    </p>
+                    <h2 className="text-sm font-bold text-zinc-100">
+                      {perfilAmigo?.username || "Cargando..."}
+                    </h2>
                   </div>
                 </div>
               </div>
             </header>
 
+            {/* Lista de mensajes */}
             <main className="custom-scrollbar flex-1 space-y-4 overflow-y-auto p-3 sm:p-4">
               {mensajes.map((msg) => {
                 const esMio = msg.sender_id === usuario?.id;
@@ -124,6 +178,7 @@ export default function ChatPage() {
                     key={msg.id}
                     className={`flex items-start gap-2 ${esMio ? "justify-end" : "justify-start"}`}
                   >
+                    {/* Avatar del emisor (solo si no es mio) */}
                     {!esMio && (
                       <img
                         src={avatarSrc}
@@ -131,6 +186,8 @@ export default function ChatPage() {
                         className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
                       />
                     )}
+
+                    {/* Burbuja del mensaje */}
                     <div
                       className={`relative max-w-[85%] rounded-2xl p-3 shadow-md ${
                         esMio
@@ -138,14 +195,21 @@ export default function ChatPage() {
                           : "rounded-tl-none border border-zinc-700 bg-zinc-800 text-zinc-200"
                       }`}
                     >
+                      {/* Nombre del emisor (solo si no es mio) */}
                       {!esMio && (
-                        <p className="mb-1 text-[10px] font-bold text-blue-400">{perfilEmisor?.username}</p>
+                        <p className="mb-1 text-[10px] font-bold text-blue-400">
+                          {perfilEmisor?.username}
+                        </p>
                       )}
                       <p className="text-sm leading-relaxed">{msg.content}</p>
-                      <p className={`mt-1 text-[9px] opacity-60 ${esMio ? "text-right" : "text-left"}`}>
+                      <p
+                        className={`mt-1 text-[9px] opacity-60 ${esMio ? "text-right" : "text-left"}`}
+                      >
                         {formatearHora(msg.created_at)}
                       </p>
                     </div>
+
+                    {/* Avatar del emisor (solo si es mio) */}
                     {esMio && (
                       <img
                         src={avatarSrc}
@@ -159,8 +223,10 @@ export default function ChatPage() {
               <div ref={finMensajesRef} />
             </main>
 
+            {/* Footer con input y botones */}
             <footer className="p-3 sm:p-4">
               <div className="relative">
+                {/* Indicador de carga cuando IA esta mejorando */}
                 {cargandoIA && (
                   <div className="pointer-events-none absolute -top-14 left-1/2 z-10 -translate-x-1/2 rounded-xl border border-blue-500/40 bg-zinc-900/95 px-4 py-2 shadow-lg shadow-blue-900/30 backdrop-blur-sm">
                     <div className="flex items-center gap-2 text-xs font-medium text-blue-200">
@@ -168,51 +234,68 @@ export default function ChatPage() {
                       <span className="inline-flex items-center">
                         Mejorando mensaje
                         <span className="ml-1 inline-flex">
-                          <span className="animate-pulse [animation-delay:0ms]">.</span>
-                          <span className="animate-pulse [animation-delay:160ms]">.</span>
-                          <span className="animate-pulse [animation-delay:320ms]">.</span>
+                          <span className="animate-pulse [animation-delay:0ms]">
+                            .
+                          </span>
+                          <span className="animate-pulse [animation-delay:160ms]">
+                            .
+                          </span>
+                          <span className="animate-pulse [animation-delay:320ms]">
+                            .
+                          </span>
                         </span>
                       </span>
                     </div>
                   </div>
                 )}
 
-              <form
-                onSubmit={enviarMensaje}
-                className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-2 focus-within:border-zinc-600"
-              >
-                <input
-                  value={nuevoMensaje}
-                  onChange={(e) => setNuevoMensaje(e.target.value)}
-                  placeholder="Escribe un mensaje..."
-                  className="flex-1 bg-transparent p-2 text-sm outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={mejorarMensajeIA}
-                  disabled={cargandoIA}
-                  className="rounded-full p-2 text-zinc-400 hover:bg-zinc-800"
+                {/* Formulario de envio de mensajes */}
+                <form
+                  onSubmit={enviarMensaje}
+                  className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-2 focus-within:border-zinc-600"
                 >
-                  <LuSparkles className={cargandoIA ? "animate-pulse text-blue-400" : ""} />
-                </button>
-                <button className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black hover:bg-zinc-200">
-                  Enviar
-                </button>
-              </form>
+                  <input
+                    value={nuevoMensaje}
+                    onChange={(e) => setNuevoMensaje(e.target.value)}
+                    placeholder="Escribe un mensaje..."
+                    className="flex-1 bg-transparent p-2 text-sm outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={mejorarMensajeIA}
+                    disabled={cargandoIA}
+                    className="rounded-full p-2 text-zinc-400 hover:bg-zinc-800"
+                  >
+                    <LuSparkles
+                      className={
+                        cargandoIA ? "animate-pulse text-blue-400" : ""
+                      }
+                    />
+                  </button>
+                  <button className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black hover:bg-zinc-200">
+                    Enviar
+                  </button>
+                </form>
               </div>
             </footer>
           </>
         ) : (
+          /* Vista cuando no hay chat seleccionado */
           <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
             <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900">
               <LuUser size={40} className="text-zinc-700" />
             </div>
-            <h2 className="text-xl font-bold">Bienvenido, {usuario?.user_metadata?.full_name || "Crack"}</h2>
-            <p className="mt-2 text-sm text-zinc-500">Busca a un amigo para comenzar a chatear.</p>
+            <h2 className="text-xl font-bold">
+              Bienvenido, {usuario?.user_metadata?.full_name || "Crack"}
+            </h2>
+            <p className="mt-2 text-sm text-zinc-500">
+              Busca a un amigo para comenzar a chatear.
+            </p>
           </div>
         )}
       </section>
 
+      {/* Modal para buscar contactos */}
       <Modal
         titulo="Buscar Contactos"
         descripcion="Escribe el nombre de usuario de la persona con la que quieres hablar."
@@ -230,6 +313,7 @@ export default function ChatPage() {
         />
       </Modal>
 
+      {/* Modal para confirmar eliminacion de chat */}
       <Modal
         titulo="Eliminar chat?"
         descripcion="Se borraran todos los mensajes de esta conversacion."

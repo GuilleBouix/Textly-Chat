@@ -2,6 +2,10 @@
 import { LuCheck, LuLogOut, LuUserPlus, LuUsers } from "react-icons/lu";
 import { Sala, UsuarioSupabase } from "../types/database";
 
+// ============================================
+// TIPOS
+// ============================================
+
 type PerfilLite = {
   username?: string | null;
   avatarUrl?: string | null;
@@ -10,8 +14,13 @@ type PerfilLite = {
 type SolicitudLite = {
   id: string;
   sender_id: string;
+  receiver_id: string;
   profiles?: { username?: string | null; email?: string | null }[] | null;
 };
+
+// ============================================
+// PROPS
+// ============================================
 
 interface SidebarProps {
   usuario: UsuarioSupabase | null;
@@ -19,12 +28,19 @@ interface SidebarProps {
   idSalaActiva: string;
   perfiles: Record<string, PerfilLite>;
   solicitudesPendientes: SolicitudLite[];
+  solicitudesEnviadas: SolicitudLite[];
+  mensajesNoLeidos: Record<string, number>;
   alSeleccionarSala: (id: string) => void;
   alEliminarSala: (id: string) => void;
   alAceptarSolicitud: (solicitudId: string, emisorId: string) => Promise<void>;
+  alCancelarSolicitud: (solicitudId: string) => Promise<void>;
   abrirModalBuscar: () => void;
   alCerrarSesion: () => void;
 }
+
+// ============================================
+// COMPONENTE SIDEBAR
+// ============================================
 
 export default function Sidebar({
   usuario,
@@ -32,15 +48,23 @@ export default function Sidebar({
   idSalaActiva,
   perfiles,
   solicitudesPendientes,
+  solicitudesEnviadas,
+  mensajesNoLeidos,
   alSeleccionarSala,
   alEliminarSala,
   alAceptarSolicitud,
+  alCancelarSolicitud,
   abrirModalBuscar,
   alCerrarSesion,
 }: SidebarProps) {
+  // ============================================
+  // RENDERIZADO
+  // ============================================
   return (
     <aside className="flex h-full w-80 flex-col border-r border-zinc-900 bg-zinc-950">
+      {/* Header con perfil del usuario */}
       <div className="flex items-center gap-3 border-b border-zinc-900 bg-zinc-900/20 p-5">
+        {/* Avatar del usuario */}
         <img
           src={
             usuario?.user_metadata?.avatar_url ||
@@ -49,12 +73,14 @@ export default function Sidebar({
           className="h-10 w-10 rounded-full border border-zinc-800"
           alt="Mi avatar"
         />
+        {/* Nombre y estado */}
         <div className="flex-1 overflow-hidden">
           <p className="truncate text-sm font-bold text-zinc-100">
             {usuario?.user_metadata?.full_name || usuario?.email?.split("@")[0]}
           </p>
           <p className="truncate text-[10px] text-zinc-500">En linea</p>
         </div>
+        {/* Boton cerrar sesion */}
         <button
           onClick={alCerrarSesion}
           className="rounded-lg p-2 text-zinc-500 transition-colors hover:bg-red-400/10 hover:text-red-400"
@@ -64,6 +90,7 @@ export default function Sidebar({
         </button>
       </div>
 
+      {/* Boton para buscar contactos */}
       <div className="p-4">
         <button
           onClick={abrirModalBuscar}
@@ -74,11 +101,16 @@ export default function Sidebar({
         </button>
       </div>
 
+      {/* Contenido scrolleable */}
       <div className="flex-1 overflow-y-auto px-3 pb-4">
+        {/* Seccion de solicitudes */}
         <div className="mb-2 flex items-center gap-2 px-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Solicitudes</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+            Solicitudes
+          </p>
         </div>
 
+        {/* Lista de solicitudes recibidas */}
         <div className="mb-4 space-y-2">
           {solicitudesPendientes.map((solicitud) => {
             const nombre =
@@ -102,7 +134,9 @@ export default function Sidebar({
                   <p className="truncate text-xs text-zinc-200">{nombre}</p>
                 </div>
                 <button
-                  onClick={() => alAceptarSolicitud(solicitud.id, solicitud.sender_id)}
+                  onClick={() =>
+                    alAceptarSolicitud(solicitud.id, solicitud.sender_id)
+                  }
                   className="flex items-center gap-1 rounded-lg bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-500"
                 >
                   <LuCheck size={12} />
@@ -112,21 +146,75 @@ export default function Sidebar({
             );
           })}
 
-          {solicitudesPendientes.length === 0 && (
-            <p className="px-2 text-xs italic text-zinc-600">No hay solicitudes pendientes.</p>
-          )}
+          {/* Lista de solicitudes enviadas */}
+          {solicitudesEnviadas.map((solicitud) => {
+            const nombre =
+              solicitud.profiles?.[0]?.username ||
+              perfiles[solicitud.receiver_id]?.username ||
+              "Usuario";
+            const avatar =
+              perfiles[solicitud.receiver_id]?.avatarUrl ||
+              `https://ui-avatars.com/api/?name=${nombre}`;
+            return (
+              <div
+                key={solicitud.id}
+                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-2"
+              >
+                <div className="flex min-w-0 items-center gap-2 pr-2">
+                  <img
+                    src={avatar}
+                    className="h-8 w-8 rounded-full border border-zinc-800 object-cover"
+                    alt={nombre}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-xs text-zinc-200">{nombre}</p>
+                    <p className="text-[10px] uppercase tracking-wide text-zinc-500">
+                      Pendiente
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await alCancelarSolicitud(solicitud.id);
+                    } catch {
+                      alert("No se pudo cancelar la solicitud.");
+                    }
+                  }}
+                  className="rounded-lg bg-zinc-800 px-2 py-1 text-xs font-semibold text-zinc-200 hover:bg-zinc-700"
+                >
+                  Cancelar
+                </button>
+              </div>
+            );
+          })}
+
+          {/* Mensaje cuando no hay solicitudes */}
+          {solicitudesPendientes.length === 0 &&
+            (solicitudesEnviadas.length === 0 ? (
+              <p className="px-2 text-xs italic text-zinc-600">
+                No hay solicitudes pendientes.
+              </p>
+            ) : null)}
         </div>
 
+        {/* Seccion de chats */}
         <div className="mb-4 flex items-center gap-2 px-2">
           <LuUsers size={14} className="text-zinc-500" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Mis Chats</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+            Mis Chats
+          </p>
         </div>
 
+        {/* Lista de salas/chats */}
         <div className="space-y-1">
           {salas.map((sala) => {
             const idAmigo =
-              sala.participant_1 === usuario?.id ? sala.participant_2 : sala.participant_1;
+              sala.participant_1 === usuario?.id
+                ? sala.participant_2
+                : sala.participant_1;
             const amigo = perfiles[idAmigo];
+            const unread = mensajesNoLeidos[sala.id] || 0;
 
             return (
               <div
@@ -138,6 +226,7 @@ export default function Sidebar({
                     : "border-transparent bg-transparent hover:border-zinc-800/50 hover:bg-zinc-900/50"
                 }`}
               >
+                {/* Avatar con indicador de online */}
                 <div className="relative">
                   <img
                     src={
@@ -150,17 +239,33 @@ export default function Sidebar({
                   <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-zinc-950 bg-green-500" />
                 </div>
 
+                {/* Nombre y badge de no leidos */}
                 <div className="flex-1 overflow-hidden">
-                  <p
-                    className={`truncate text-sm font-semibold ${
-                      idSalaActiva === sala.id ? "text-blue-400" : "text-zinc-200"
-                    }`}
-                  >
-                    {amigo?.username || "Usuario"}
+                  <div className="flex items-center justify-between gap-2">
+                    <p
+                      className={`truncate text-sm font-semibold ${
+                        idSalaActiva === sala.id
+                          ? "text-blue-400"
+                          : "text-zinc-200"
+                      }`}
+                    >
+                      {amigo?.username || "Usuario"}
+                    </p>
+                    {unread > 0 && idSalaActiva !== sala.id && (
+                      <span
+                        aria-label={`${unread} mensajes nuevos`}
+                        className="inline-flex min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[10px] font-bold text-white"
+                      >
+                        {unread > 99 ? "99+" : unread}
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-xs text-zinc-500">
+                    Haz clic para chatear
                   </p>
-                  <p className="truncate text-xs text-zinc-500">Haz clic para chatear</p>
                 </div>
 
+                {/* Boton eliminar chat */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -168,15 +273,22 @@ export default function Sidebar({
                   }}
                   className="p-2 text-zinc-600 opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
                 >
-                  <LuLogOut size={14} className="rotate-180" title="Eliminar chat" />
+                  <LuLogOut
+                    size={14}
+                    className="rotate-180"
+                    title="Eliminar chat"
+                  />
                 </button>
               </div>
             );
           })}
 
+          {/* Mensaje cuando no hay chats */}
           {salas.length === 0 && (
             <div className="px-4 py-10 text-center">
-              <p className="text-xs italic text-zinc-600">Aun no tienes chats.</p>
+              <p className="text-xs italic text-zinc-600">
+                Aun no tienes chats.
+              </p>
             </div>
           )}
         </div>

@@ -1,6 +1,10 @@
 "use client";
 import { ReactNode } from "react";
 
+// ============================================
+// PROPS
+// ============================================
+
 interface ModalProps {
   titulo: string;
   descripcion: string;
@@ -12,6 +16,10 @@ interface ModalProps {
   textoConfirmar?: string;
 }
 
+// ============================================
+// COMPONENTE MODAL
+// ============================================
+
 export default function Modal({
   titulo,
   descripcion,
@@ -22,16 +30,25 @@ export default function Modal({
   colorBoton = "bg-blue-600",
   textoConfirmar = "Confirmar",
 }: ModalProps) {
+  // Si no esta abierto, no renderiza nada
   if (!abierto) return null;
 
+  // ============================================
+  // RENDERIZADO
+  // ============================================
   return (
+    // Overlay oscuro
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+      {/* Contenedor del modal */}
       <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+        {/* Header con titulo y descripcion */}
         <div className="p-6">
           <h3 className="text-lg font-bold mb-1 text-white">{titulo}</h3>
           <p className="text-sm text-zinc-400 mb-4">{descripcion}</p>
           {children}
         </div>
+
+        {/* Footer con botones de accion */}
         <div className="flex p-4 bg-zinc-950 gap-3">
           <button
             onClick={alCerrar}
