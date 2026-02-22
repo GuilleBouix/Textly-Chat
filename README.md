@@ -133,7 +133,7 @@ create table if not exists public.messages (
 alter table public.profiles enable row level security;
 
 drop policy if exists "Perfiles visibles para todos" on public.profiles;
-drop policy if exists "Dueño edita perfil" on public.profiles;
+drop policy if exists "DueÃ±o edita perfil" on public.profiles;
 
 create policy "Perfiles visibles para todos"
 on public.profiles
@@ -141,7 +141,7 @@ for select
 to authenticated
 using (true);
 
-create policy "Dueño edita perfil"
+create policy "DueÃ±o edita perfil"
 on public.profiles
 for update
 to authenticated
@@ -271,11 +271,3 @@ pnpm dev
 pnpm lint
 pnpm exec tsc --noEmit
 ```
-
-## Nota tecnica
-
-Actualmente existe un error de tipado pendiente fuera del flujo principal de chat:
-
-- `app/api/users/meta/route.ts:73` (`id` con tipo implicito `any`)
-
-No afecta el flujo funcional de chat/contactos, pero conviene corregirlo para dejar `tsc` completamente en verde.
