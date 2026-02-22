@@ -1,71 +1,281 @@
-# Textly Chat: Chat Dual con IA Asistida.
+# Textly Chat
 
-Este documento describe la logica, la arquitectura de datos y el flujo de trabajo de la aplicacion.
+Aplicacion de chat 1:1 con flujo de contactos por solicitud, tiempo real con Supabase y mejora de redaccion con IA.
 
-## 1. Stack tecnologico
+## Stack
 
-- **Framework:** Next.js 15 (App Router)
-- **Estilos:** Tailwind CSS
-- **Base de datos y tiempo real:** Supabase
-- **IA:** Google Gemini 1.5 Flash (via Route Handler seguro)
-- **Autenticacion:** Supabase Auth (Google Provider)
+- Next.js (App Router)
+- React + Tailwind CSS
+- Supabase (Auth, Postgres, Realtime, RLS)
+- Gemini via route handler interno (`/api/improve`)
 
-## 2. Arquitectura de datos (Supabase)
+## Funcionalidades implementadas
 
-Se usan dos tablas principales con **RLS (Row Level Security)** activado para garantizar que cada usuario solo acceda a sus datos.
+- Busqueda de usuarios por `username`.
+- Envio de solicitud de contacto (estado `pending`).
+- Aceptacion de solicitud por el receptor (pasa a `accepted`).
+- Creacion de chat (`rooms`) solo cuando la solicitud se acepta.
+- Mensajeria en tiempo real por sala (`messages`).
+- Insercion visible inmediata al enviar mensaje + deduplicacion por Realtime.
+- Perfiles enriquecidos con metadata de `auth.users` (nombre/foto) mediante `/api/users/meta`.
+- Avatares en:
+  - Sidebar (usuario actual, solicitudes y lista de chats)
+  - Header del chat
+  - Burbujas de mensajes (alineado arriba del globo)
+- Indicador flotante de IA sobre el input con spinner + puntos animados.
+- Scrollbar de chat estilizada (`.custom-scrollbar`).
 
-### `rooms` (salas de chat)
+## Flujo de contactos y chat
 
-- `id`: identificador unico (`UUID`)
-- `created_at`: fecha de creacion
-- `participant_1`: ID del primer usuario
-- `participant_2`: ID del segundo usuario
+1. Usuario A busca a Usuario B en el modal de contactos.
+2. Al pulsar `Solicitar`, se inserta una fila en `friendships` con `status='pending'`.
+3. Usuario B ve la solicitud en Sidebar > `Solicitudes`.
+4. Usuario B pulsa `Aceptar`.
+5. Se actualiza `friendships.status='accepted'`.
+6. Se crea (o recupera) la `room` 1:1 y se activa en UI.
+7. Ambos usuarios pueden enviar/recibir mensajes en `messages`.
 
-**Politica de seguridad:** solo los participantes de la sala pueden leer su fila.
+## Arquitectura actual de cliente
 
-### `messages` (mensajes)
+### Hook principal
 
-- `id`: identificador unico
-- `room_id`: clave foranea hacia la sala
-- `sender_id`: ID del usuario que envia
-- `content`: texto del mensaje
-- `created_at`: timestamp con zona horaria
+- `app/hooks/useChat.ts`
+  - Estado global de chat (usuario, salas, sala activa, mensajes, perfiles, solicitudes).
+  - Carga de perfiles de `profiles` + metadata de `auth.users` (`/api/users/meta`).
+  - Suscripciones realtime para:
+    - `messages` por sala activa
+    - `friendships` recibidas por usuario
+  - Acciones principales:
+    - `buscarUsuarios`
+    - `agregarAmigo` (envia solicitud `pending`)
+    - `aceptarSolicitud`
+    - `enviarMensaje`
+    - `eliminarSala`
+    - `mejorarMensajeIA`
+    - `cerrarSesion`
 
-**Politica de seguridad:** un usuario solo puede insertar mensajes con su propio `sender_id`.
+### UI principal
 
-## 3. Funciones principales y flujos logicos
+- `app/page.tsx`
+  - Layout principal del chat.
+  - Header con avatar/nombre del contacto activo.
+  - Lista de mensajes con avatar por emisor.
+  - Footer con input, envio y boton IA.
+  - Banner flotante de carga cuando IA corrige mensaje.
 
-### A) Comunicacion en tiempo real
+### Sidebar
 
-- **Envio optimista:** al presionar "Enviar", el mensaje aparece de inmediato en UI mientras se persiste en la base de datos.
-- **Suscripcion realtime:** la app escucha nuevos `INSERT` en `messages`; si `sender_id` no coincide con el usuario actual, renderiza el mensaje entrante.
-- **Indicador de escritura:** se utiliza Supabase Broadcast para eventos efimeros de "esta escribiendo..." sin escribir en base de datos.
+- `app/components/Sidebar.tsx`
+  - Perfil del usuario logueado.
+  - Seccion `Solicitudes` con boton `Aceptar`.
+  - Seccion `Mis Chats`.
 
-### B) Funcion de mejora de redaccion (IA)
+### Busqueda
 
-1. El usuario escribe en el input y activa la mejora con boton "IA" (o atajo).
-2. El texto se envia a un Route Handler interno de Next.js para proteger la API Key.
-3. Se guarda un respaldo temporal del texto original (`backup state`).
-4. La IA devuelve una sugerencia de redaccion.
-5. El usuario puede:
-   - **Aceptar:** reemplaza el input por la sugerencia.
-   - **Rechazar / `Esc`:** descarta la sugerencia y restaura el texto original.
+- `app/components/UserSearch.tsx`
+  - Busca por username.
+  - Boton `Solicitar` para enviar request de amistad.
 
-## 4. Configuracion de IA (Prompt Engineering)
+## API routes internas
 
-El sistema usa un prompt oculto para que Gemini actue como herramienta de correccion, no como chat:
+- `app/api/improve/route.ts`
+  - Recibe texto y devuelve `improvedText` usando Gemini.
+  - La API key se mantiene del lado servidor.
 
-```text
-Eres un corrector de estilo profesional. Tu unica tarea es recibir un mensaje y devolver una version mas clara, profesional y sin errores gramaticales. NO respondas con saludos ni explicaciones. Solo devuelve el texto corregido. Si el texto no puede mejorarse, devuelvelo exactamente igual.
+- `app/api/users/meta/route.ts`
+  - Recibe lista de IDs.
+  - Devuelve metadata de auth (`nombre`, `avatarUrl`, `email`) para enriquecer UI.
+
+## Esquema de base de datos (actual)
+
+```sql
+-- PROFILES
+create table if not exists public.profiles (
+  id uuid references auth.users(id) on delete cascade primary key,
+  email text unique not null,
+  username text,
+  created_at timestamptz default now()
+);
+
+-- FRIENDSHIPS
+create table if not exists public.friendships (
+  id uuid default gen_random_uuid() primary key,
+  sender_id uuid references public.profiles(id) on delete cascade not null,
+  receiver_id uuid references public.profiles(id) on delete cascade not null,
+  status text check (status in ('pending', 'accepted', 'blocked')) default 'pending',
+  created_at timestamptz default now(),
+  unique (sender_id, receiver_id)
+);
+
+-- ROOMS
+create table if not exists public.rooms (
+  id uuid default gen_random_uuid() primary key,
+  participant_1 uuid references public.profiles(id) on delete cascade not null,
+  participant_2 uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  unique (participant_1, participant_2)
+);
+
+-- MESSAGES
+create table if not exists public.messages (
+  id uuid default gen_random_uuid() primary key,
+  room_id uuid references public.rooms(id) on delete cascade not null,
+  sender_id uuid references public.profiles(id) not null,
+  content text not null,
+  created_at timestamptz default now()
+);
 ```
 
-## 5. Medidas de seguridad clave
+## RLS (politicas)
 
-- **Proteccion de API Key:** la clave de Gemini nunca se expone al navegador; permanece en servidor.
-- **Validacion de sesion:** antes de procesar texto con IA, el backend verifica sesion activa en Supabase.
-- **RLS en base de datos:** las politicas SQL impiden leer mensajes ajenos sin credenciales validas de participante.
+```sql
+-- PROFILES
+alter table public.profiles enable row level security;
 
-## 6. Experiencia de usuario (UX)
+drop policy if exists "Perfiles visibles para todos" on public.profiles;
+drop policy if exists "Dueño edita perfil" on public.profiles;
 
-- **Bloqueo preventivo:** mientras la IA genera sugerencia, el input se bloquea para evitar conflictos de edicion.
-- **Manejo de errores:** si la IA falla, el input se desbloquea y el usuario puede enviar el texto original sin perdida.
+create policy "Perfiles visibles para todos"
+on public.profiles
+for select
+to authenticated
+using (true);
+
+create policy "Dueño edita perfil"
+on public.profiles
+for update
+to authenticated
+using (auth.uid() = id)
+with check (auth.uid() = id);
+
+-- FRIENDSHIPS
+alter table public.friendships enable row level security;
+
+drop policy if exists "Ver mis solicitudes" on public.friendships;
+drop policy if exists "Enviar solicitud" on public.friendships;
+drop policy if exists "Gestionar solicitud" on public.friendships;
+
+create policy "Ver mis solicitudes"
+on public.friendships
+for select
+to authenticated
+using (auth.uid() = sender_id or auth.uid() = receiver_id);
+
+-- Permite crear solicitudes pending (y accepted si luego decides flujo directo)
+create policy "Enviar solicitud"
+on public.friendships
+for insert
+to authenticated
+with check (
+  auth.uid() = sender_id
+  and status in ('pending', 'accepted')
+);
+
+create policy "Gestionar solicitud"
+on public.friendships
+for update
+to authenticated
+using (auth.uid() = sender_id or auth.uid() = receiver_id)
+with check (auth.uid() = sender_id or auth.uid() = receiver_id);
+
+-- ROOMS
+alter table public.rooms enable row level security;
+
+drop policy if exists "Ver mis chats" on public.rooms;
+drop policy if exists "Crear sala" on public.rooms;
+drop policy if exists "Eliminar sala propia" on public.rooms;
+
+create policy "Ver mis chats"
+on public.rooms
+for select
+to authenticated
+using (auth.uid() = participant_1 or auth.uid() = participant_2);
+
+create policy "Crear sala"
+on public.rooms
+for insert
+to authenticated
+with check (auth.uid() = participant_1 or auth.uid() = participant_2);
+
+create policy "Eliminar sala propia"
+on public.rooms
+for delete
+to authenticated
+using (auth.uid() = participant_1 or auth.uid() = participant_2);
+
+-- MESSAGES
+alter table public.messages enable row level security;
+
+drop policy if exists "Ver mensajes de mis salas" on public.messages;
+drop policy if exists "Enviar mensaje" on public.messages;
+
+create policy "Ver mensajes de mis salas"
+on public.messages
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.rooms r
+    where r.id = room_id
+      and (r.participant_1 = auth.uid() or r.participant_2 = auth.uid())
+  )
+);
+
+create policy "Enviar mensaje"
+on public.messages
+for insert
+to authenticated
+with check (auth.uid() = sender_id);
+```
+
+## Trigger de perfiles
+
+```sql
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, email, username)
+  values (
+    new.id,
+    new.email,
+    new.raw_user_meta_data->>'full_name'
+  )
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_auth_user_created on auth.users;
+
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute procedure public.handle_new_user();
+```
+
+## Variables de entorno
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+## Scripts
+
+```bash
+pnpm dev
+pnpm lint
+pnpm exec tsc --noEmit
+```
+
+## Nota tecnica
+
+Actualmente existe un error de tipado pendiente fuera del flujo principal de chat:
+
+- `app/api/users/meta/route.ts:73` (`id` con tipo implicito `any`)
+
+No afecta el flujo funcional de chat/contactos, pero conviene corregirlo para dejar `tsc` completamente en verde.

@@ -1,8 +1,22 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { Mensaje, Sala, UsuarioSupabase } from "../types/database";
+import {
+  Amistad,
+  Mensaje,
+  Perfil,
+  Sala,
+  UsuarioSupabase,
+} from "../types/database";
 
-type PerfilChat = {
+type PerfilChat = Pick<Perfil, "id" | "email" | "username"> & {
+  avatarUrl: string | null;
+};
+
+type SolicitudPendiente = Amistad & {
+  profiles?: Pick<Perfil, "username" | "email">[] | null;
+};
+
+type AuthMetaUser = {
   id: string;
   email?: string;
   nombre: string;
@@ -10,6 +24,32 @@ type PerfilChat = {
 };
 
 export function useChat() {
+  const debug = (...args: unknown[]) => {
+    console.log("[chat-debug]", ...args);
+  };
+
+  const debugError = (scope: string, error: unknown) => {
+    if (error && typeof error === "object") {
+      const maybeError = error as {
+        code?: string;
+        message?: string;
+        details?: string;
+        hint?: string;
+        status?: number;
+      };
+      console.error("[chat-debug]", scope, {
+        code: maybeError.code,
+        message: maybeError.message,
+        details: maybeError.details,
+        hint: maybeError.hint,
+        status: maybeError.status,
+        raw: error,
+      });
+      return;
+    }
+    console.error("[chat-debug]", scope, error);
+  };
+
   const [usuario, setUsuario] = useState<UsuarioSupabase | null>(null);
   const [salas, setSalas] = useState<Sala[]>([]);
   const [idSalaActiva, setIdSalaActiva] = useState<string | null>(null);
@@ -17,101 +57,95 @@ export function useChat() {
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [cargandoIA, setCargandoIA] = useState(false);
   const [perfiles, setPerfiles] = useState<Record<string, PerfilChat>>({});
-  const [errorSalaEliminada, setErrorSalaEliminada] = useState<string | null>(null);
-  const cachePerfilesRef = useRef<Record<string, { perfil: PerfilChat; fetchedAt: number }>>({});
-  const inFlightPerfilesRef = useRef<Set<string>>(new Set());
-  const PERFIL_TTL_MS = 5 * 60 * 1000;
+  const [solicitudesPendientes, setSolicitudesPendientes] = useState<
+    SolicitudPendiente[]
+  >([]);
 
-  const generarCodigoSala = () =>
-    Math.floor(10000000 + Math.random() * 90000000).toString();
-
-  const crearPerfilDesdeUsuario = (user: any): PerfilChat => ({
-    id: user.id,
-    email: user.email ?? undefined,
-    nombre:
-      user.user_metadata?.full_name ||
-      user.user_metadata?.name ||
-      user.email?.split("@")[0] ||
-      "Usuario",
-    avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
-  });
-
-  const agregarPerfiles = (lista: PerfilChat[]) => {
-    if (!lista.length) return;
-
-    const now = Date.now();
-    lista.forEach((p) => {
-      if (!p?.id) return;
-      cachePerfilesRef.current[p.id] = { perfil: p, fetchedAt: now };
-    });
-
-    setPerfiles((prev) => {
-      const next = { ...prev };
-      lista.forEach((p) => {
-        if (!p?.id) return;
-        next[p.id] = p;
-      });
-      return next;
-    });
-  };
-
-  const cargarPerfilesPorIds = async (ids: string[]) => {
-    const now = Date.now();
-    const idsUnicos = [...new Set(ids.filter(Boolean))];
+  const cargarMetadataAuth = async (ids: string[]) => {
+    const idsUnicos = Array.from(new Set(ids.filter(Boolean)));
     if (!idsUnicos.length) return;
-
-    const faltantes = idsUnicos.filter((id) => {
-      if (inFlightPerfilesRef.current.has(id)) return false;
-      const cached = cachePerfilesRef.current[id];
-      if (!cached) return true;
-      return now - cached.fetchedAt > PERFIL_TTL_MS;
-    });
-    if (!faltantes.length) return;
-
-    faltantes.forEach((id) => inFlightPerfilesRef.current.add(id));
 
     try {
       const res = await fetch("/api/users/meta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: faltantes }),
+        body: JSON.stringify({ ids: idsUnicos }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        console.error("Error /api/users/meta:", err);
+        debug("users.meta:error", err);
         return;
       }
 
-      const data = await res.json();
-      if (Array.isArray(data?.users)) {
-        agregarPerfiles(data.users as PerfilChat[]);
-      }
+      const body = (await res.json()) as { users?: AuthMetaUser[] };
+      const users = body.users ?? [];
+      if (!Array.isArray(users)) return;
+
+      setPerfiles((prev) => {
+        const next = { ...prev };
+        users.forEach((user) => {
+          const actual = next[user.id];
+          next[user.id] = {
+            id: user.id,
+            email: user.email || actual?.email || "",
+            username: actual?.username || user.nombre || "Usuario",
+            avatarUrl: user.avatarUrl || actual?.avatarUrl || null,
+          };
+        });
+        return next;
+      });
     } catch (error) {
-      console.error("No se pudieron cargar perfiles de la sala:", error);
-    } finally {
-      faltantes.forEach((id) => inFlightPerfilesRef.current.delete(id));
+      debugError("users.meta.fetch", error);
     }
   };
 
-  const validarSalaActiva = async () => {
-    if (!idSalaActiva) return null;
+  const cargarPerfilesPublicos = async (ids: string[]) => {
+    const idsUnicos = Array.from(new Set(ids.filter(Boolean)));
+    if (!idsUnicos.length) return;
 
-    const { data, error } = await supabase
-      .from("rooms")
-      .select("id")
-      .eq("id", idSalaActiva)
-      .maybeSingle();
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, email, username")
+      .in("id", idsUnicos);
 
-    if (error || !data) {
-      setErrorSalaEliminada("Este chat fue eliminado.");
-      setIdSalaActiva(null);
-      setMensajes([]);
-      setSalas((prev) => prev.filter((s) => s.id !== idSalaActiva));
-      return null;
+    if (data) {
+      setPerfiles((prev) => {
+        const next = { ...prev };
+        data.forEach((perfil) => {
+          const actual = next[perfil.id];
+          next[perfil.id] = {
+            id: perfil.id,
+            email: perfil.email || actual?.email || "",
+            username:
+              perfil.username ||
+              actual?.username ||
+              perfil.email?.split("@")[0] ||
+              "Usuario",
+            avatarUrl: actual?.avatarUrl || null,
+          };
+        });
+        return next;
+      });
     }
 
-    return data;
+    await cargarMetadataAuth(idsUnicos);
+  };
+
+  const cargarSolicitudes = async (userId: string) => {
+    const { data } = await supabase
+      .from("friendships")
+      .select(
+        "id, sender_id, receiver_id, status, created_at, profiles:sender_id(username, email)",
+      )
+      .eq("receiver_id", userId)
+      .eq("status", "pending");
+
+    if (data) {
+      setSolicitudesPendientes(data as SolicitudPendiente[]);
+      const idsEmisores = data.map((item) => item.sender_id);
+      await cargarPerfilesPublicos(idsEmisores);
+    }
   };
 
   useEffect(() => {
@@ -123,24 +157,101 @@ export function useChat() {
       if (!user) return;
 
       setUsuario(user as UsuarioSupabase);
-      agregarPerfiles([crearPerfilDesdeUsuario(user)]);
+      setPerfiles((prev) => ({
+        ...prev,
+        [user.id]: {
+          id: user.id,
+          email: user.email || "",
+          username:
+            (user.user_metadata?.full_name as string) ||
+            user.email?.split("@")[0] ||
+            "Yo",
+          avatarUrl: (user.user_metadata?.avatar_url as string) || null,
+        },
+      }));
 
-      const { data } = await supabase
+      const { data: salasData } = await supabase
         .from("rooms")
         .select("*")
-        .or(`creator_id.eq.${user.id},participant_id.eq.${user.id}`)
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
         .order("created_at", { ascending: false });
 
-      if (data) setSalas(data);
+      if (salasData?.length) {
+        setSalas(salasData as Sala[]);
+        setIdSalaActiva((prev) => prev ?? salasData[0].id);
+
+        const idsContactos = salasData.map((sala) =>
+          sala.participant_1 === user.id
+            ? sala.participant_2
+            : sala.participant_1,
+        );
+        await cargarPerfilesPublicos(idsContactos);
+      }
+
+      await cargarSolicitudes(user.id);
+      await cargarMetadataAuth([user.id]);
     };
 
     inicializar();
   }, []);
 
   useEffect(() => {
-    if (!idSalaActiva) return;
+    if (!usuario?.id) return;
 
-    setErrorSalaEliminada(null);
+    const canalSolicitudes = supabase
+      .channel(`friendships-${usuario.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "friendships",
+          filter: `receiver_id=eq.${usuario.id}`,
+        },
+        (payload) => {
+          const nuevaSolicitud = payload.new as SolicitudPendiente;
+          if (nuevaSolicitud.status !== "pending") return;
+
+          setSolicitudesPendientes((prev) =>
+            prev.some((item) => item.id === nuevaSolicitud.id)
+              ? prev
+              : [nuevaSolicitud, ...prev],
+          );
+          void cargarPerfilesPublicos([nuevaSolicitud.sender_id]);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "friendships",
+          filter: `receiver_id=eq.${usuario.id}`,
+        },
+        (payload) => {
+          const solicitudActualizada = payload.new as SolicitudPendiente;
+          setSolicitudesPendientes((prev) => {
+            if (solicitudActualizada.status !== "pending") {
+              return prev.filter((item) => item.id !== solicitudActualizada.id);
+            }
+            return prev.some((item) => item.id === solicitudActualizada.id)
+              ? prev
+              : [solicitudActualizada, ...prev];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(canalSolicitudes);
+    };
+  }, [usuario?.id]);
+
+  useEffect(() => {
+    if (!idSalaActiva) {
+      setMensajes([]);
+      return;
+    }
 
     const cargarMensajes = async () => {
       const { data } = await supabase
@@ -150,28 +261,16 @@ export function useChat() {
         .order("created_at", { ascending: true });
 
       if (data) {
-        setMensajes(data);
-        const senderIds = data.map((m) => m.sender_id);
-        await cargarPerfilesPorIds(senderIds);
-      }
-
-      const { data: salaActual } = await supabase
-        .from("rooms")
-        .select("creator_id, participant_id")
-        .eq("id", idSalaActiva)
-        .maybeSingle();
-
-      if (salaActual) {
-        await cargarPerfilesPorIds(
-          [salaActual.creator_id, salaActual.participant_id].filter(Boolean) as string[],
-        );
+        setMensajes(data as Mensaje[]);
+        const idsEmisores = data.map((m) => m.sender_id);
+        await cargarPerfilesPublicos(idsEmisores);
       }
     };
 
     cargarMensajes();
 
-    const canalMensajes = supabase
-      .channel(`sala-${idSalaActiva}`)
+    const canal = supabase
+      .channel(`room-${idSalaActiva}`)
       .on(
         "postgres_changes",
         {
@@ -181,193 +280,274 @@ export function useChat() {
           filter: `room_id=eq.${idSalaActiva}`,
         },
         (payload) => {
-          const msg = payload.new as Mensaje;
-          setMensajes((prev) => [...prev, msg]);
-          void cargarPerfilesPorIds([msg.sender_id]);
-        },
-      )
-      .subscribe();
-
-    const canalSalaEliminada = supabase
-      .channel(`room-delete-${idSalaActiva}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "rooms",
-          filter: `id=eq.${idSalaActiva}`,
-        },
-        () => {
-          setErrorSalaEliminada("Este chat fue eliminado.");
-          setIdSalaActiva(null);
-          setMensajes([]);
-          setSalas((prev) => prev.filter((s) => s.id !== idSalaActiva));
+          setMensajes((prev) =>
+            prev.some((msg) => msg.id === (payload.new as Mensaje).id)
+              ? prev
+              : [...prev, payload.new as Mensaje],
+          );
+          const senderId = (payload.new as Mensaje).sender_id;
+          void cargarPerfilesPublicos([senderId]);
         },
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(canalMensajes);
-      supabase.removeChannel(canalSalaEliminada);
+      void supabase.removeChannel(canal);
     };
   }, [idSalaActiva]);
 
-  const crearSala = async () => {
-    if (!usuario) {
-      console.error("No hay usuario autenticado para crear sala.");
-      return;
+  const buscarUsuarios = async (username: string): Promise<Perfil[]> => {
+    const termino = username.trim();
+    if (!termino) return [];
+
+    let query = supabase
+      .from("profiles")
+      .select("id, email, username, created_at")
+      .ilike("username", `${termino}%`)
+      .limit(8);
+
+    if (usuario?.id) {
+      query = query.neq("id", usuario.id);
     }
 
-    const nuevoCodigo = generarCodigoSala();
-
-    const { data, error } = await supabase
-      .from("rooms")
-      .insert([
-        {
-          creator_id: usuario.id,
-          share_code: nuevoCodigo,
-        },
-      ])
-      .select()
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error al crear sala:", {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-      });
-      alert("No se pudo crear la sala. Intentalo otra vez.");
-      return;
-    }
-
-    if (data) {
-      setSalas([data, ...salas]);
-      setIdSalaActiva(data.id);
-    }
+    const { data } = await query;
+    return (data as Perfil[]) || [];
   };
 
-  const unirseASala = async (codigo: string) => {
-    if (!usuario || !codigo) return { error: "Faltan datos" };
+  const agregarAmigo = async (amigoId: string) => {
+    debug("agregarAmigo:start", { usuarioId: usuario?.id, amigoId });
 
-    const { data: sala } = await supabase
+    if (!usuario || amigoId === usuario.id) {
+      debug("agregarAmigo:skip", {
+        reason: !usuario ? "no-user" : "self-friendship",
+      });
+      return;
+    }
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      debugError("auth.getSession", sessionError);
+    } else {
+      debug("auth.session", {
+        hasSession: !!session,
+        sessionUserId: session?.user?.id,
+        accessTokenPreview: session?.access_token?.slice(0, 16),
+      });
+    }
+
+    const {
+      data: { user: authUser },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      debugError("auth.getUser", userError);
+    } else {
+      debug("auth.user", {
+        authUserId: authUser?.id,
+        authEmail: authUser?.email,
+      });
+    }
+
+    const { data: amistadExistente, error: amistadExistenteError } =
+      await supabase
+        .from("friendships")
+        .select("id, sender_id, receiver_id, status")
+        .or(
+          `and(sender_id.eq.${usuario.id},receiver_id.eq.${amigoId}),and(sender_id.eq.${amigoId},receiver_id.eq.${usuario.id})`,
+        )
+        .maybeSingle();
+
+    if (amistadExistenteError) {
+      debugError("friendships.maybeSingle", amistadExistenteError);
+    } else {
+      debug("friendships.maybeSingle:ok", {
+        found: !!amistadExistente,
+        friendshipId: amistadExistente?.id,
+        status: amistadExistente?.status,
+      });
+    }
+
+    if (amistadExistente) {
+      if (amistadExistente.status === "accepted") {
+        const { data: salaExistente } = await supabase
+          .from("rooms")
+          .select("*")
+          .or(
+            `and(participant_1.eq.${usuario.id},participant_2.eq.${amigoId}),and(participant_1.eq.${amigoId},participant_2.eq.${usuario.id})`,
+          )
+          .maybeSingle();
+
+        if (salaExistente) {
+          setIdSalaActiva(salaExistente.id);
+          await cargarPerfilesPublicos([amigoId]);
+          debug("agregarAmigo:end", { action: "open-existing-room" });
+          return;
+        }
+      }
+
+      debug("agregarAmigo:end", { action: "friendship-already-exists" });
+      return;
+    }
+
+    const payload = {
+      sender_id: usuario.id,
+      receiver_id: amigoId,
+      status: "pending" as const,
+    };
+    debug("friendships.insert:payload", payload);
+
+    const { error: amistadInsertError } = await supabase
+      .from("friendships")
+      .insert([payload]);
+
+    if (amistadInsertError) {
+      debugError("friendships.insert", amistadInsertError);
+      throw amistadInsertError;
+    }
+
+    await cargarPerfilesPublicos([amigoId]);
+    debug("friendships.insert:ok");
+    debug("agregarAmigo:end", { action: "request-sent" });
+  };
+
+  const aceptarSolicitud = async (solicitudId: string, emisorId: string) => {
+    if (!usuario) return;
+
+    debug("aceptarSolicitud:start", {
+      solicitudId,
+      emisorId,
+      receptorId: usuario.id,
+    });
+
+    const { error: updateError } = await supabase
+      .from("friendships")
+      .update({ status: "accepted" })
+      .eq("id", solicitudId)
+      .eq("receiver_id", usuario.id);
+
+    if (updateError) {
+      debugError("friendships.update.accepted", updateError);
+      throw updateError;
+    }
+
+    const [participant1, participant2] = [usuario.id, emisorId].sort();
+    const { data: room, error: roomError } = await supabase
       .from("rooms")
-      .select("*")
-      .eq("share_code", codigo.trim().toUpperCase())
+      .insert([{ participant_1: participant1, participant_2: participant2 }])
+      .select()
       .single();
 
-    if (!sala) return { error: "La sala no existe." };
-    if (sala.creator_id === usuario.id)
-      return { error: "Ya eres el creador de esta sala." };
+    if (roomError) {
+      debugError("rooms.insert.after-accept", roomError);
 
-    const { error: errorUpdate } = await supabase
-      .from("rooms")
-      .update({ participant_id: usuario.id })
-      .eq("id", sala.id);
+      const { data: fallbackRoom } = await supabase
+        .from("rooms")
+        .select("*")
+        .or(
+          `and(participant_1.eq.${usuario.id},participant_2.eq.${emisorId}),and(participant_1.eq.${emisorId},participant_2.eq.${usuario.id})`,
+        )
+        .maybeSingle();
 
-    if (errorUpdate) return { error: "No pudiste unirte." };
-
-    const salaActualizada = { ...sala, participant_id: usuario.id };
-    setSalas([salaActualizada, ...salas]);
-    setIdSalaActiva(sala.id);
-    return { success: true };
-  };
-
-  const eliminarSala = async (id: string) => {
-    const { error } = await supabase.from("rooms").delete().eq("id", id);
-    if (!error) {
-      setSalas(salas.filter((s) => s.id !== id));
-      if (idSalaActiva === id) {
-        setIdSalaActiva(null);
-        setMensajes([]);
+      if (fallbackRoom) {
+        setSalas((prev) =>
+          prev.some((sala) => sala.id === fallbackRoom.id)
+            ? prev
+            : [fallbackRoom as Sala, ...prev],
+        );
+        setIdSalaActiva(fallbackRoom.id);
       }
+    } else {
+      setSalas((prev) =>
+        prev.some((sala) => sala.id === room.id) ? prev : [room as Sala, ...prev],
+      );
+      setIdSalaActiva(room.id);
     }
+
+    setSolicitudesPendientes((prev) =>
+      prev.filter((solicitud) => solicitud.id !== solicitudId),
+    );
+    await cargarPerfilesPublicos([emisorId]);
+    debug("aceptarSolicitud:end");
   };
 
   const enviarMensaje = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoMensaje.trim() || !usuario || !idSalaActiva) return;
 
-    const salaValida = await validarSalaActiva();
-    if (!salaValida) return;
-
-    const { error } = await supabase.from("messages").insert([
-      { content: nuevoMensaje, sender_id: usuario.id, room_id: idSalaActiva },
-    ]);
+    const { data: insertedMessage, error } = await supabase
+      .from("messages")
+      .insert([
+        {
+          sender_id: usuario.id,
+          room_id: idSalaActiva,
+          content: nuevoMensaje.trim(),
+        },
+      ])
+      .select()
+      .single();
 
     if (error) {
-      if (error.code === "23503") {
-        setErrorSalaEliminada("Este chat fue eliminado.");
-      } else {
-        alert("No se pudo enviar el mensaje.");
-      }
+      debugError("messages.insert", error);
+      alert("No se pudo enviar el mensaje.");
       return;
+    }
+
+    if (insertedMessage) {
+      setMensajes((prev) =>
+        prev.some((msg) => msg.id === insertedMessage.id)
+          ? prev
+          : [...prev, insertedMessage as Mensaje],
+      );
+      void cargarPerfilesPublicos([(insertedMessage as Mensaje).sender_id]);
     }
 
     setNuevoMensaje("");
   };
 
+  const eliminarSala = async (idSala: string) => {
+    await supabase.from("rooms").delete().eq("id", idSala);
+    setSalas((prev) => {
+      const restantes = prev.filter((sala) => sala.id !== idSala);
+      if (idSalaActiva === idSala) {
+        setIdSalaActiva(restantes[0]?.id ?? null);
+        setMensajes([]);
+      }
+      return restantes;
+    });
+  };
+
   const mejorarMensajeIA = async () => {
-    if (!nuevoMensaje.trim() || !idSalaActiva) return;
+    if (!nuevoMensaje.trim()) return;
 
-    const salaValida = await validarSalaActiva();
-    if (!salaValida) return;
-
-    setCargandoIA(true);
     try {
+      setCargandoIA(true);
       const res = await fetch("/api/improve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: nuevoMensaje }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data?.details || data?.error || "No se pudo mejorar el mensaje.");
-        return;
+      const body = await res.json();
+      if (res.ok && body?.improvedText) {
+        setNuevoMensaje(body.improvedText);
       }
-
-      if (data.improvedText) setNuevoMensaje(data.improvedText.trim());
     } finally {
       setCargandoIA(false);
     }
   };
 
-  const limpiarSesionCliente = () => {
-    if (typeof window === "undefined") return;
-
-    try {
-      const keys = Object.keys(localStorage);
-      keys.forEach((key) => {
-        if (key.startsWith("sb-")) localStorage.removeItem(key);
-      });
-    } catch {}
-
-    try {
-      const keys = Object.keys(sessionStorage);
-      keys.forEach((key) => {
-        if (key.startsWith("sb-")) sessionStorage.removeItem(key);
-      });
-    } catch {}
-
-    try {
-      document.cookie.split(";").forEach((cookie) => {
-        const eqPos = cookie.indexOf("=");
-        const name =
-          eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
-        if (!name) return;
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-      });
-    } catch {}
-  };
-
   const cerrarSesion = async () => {
-    await supabase.auth.signOut({ scope: "global" });
-    limpiarSesionCliente();
+    await supabase.auth.signOut();
     window.location.href = "/login";
   };
+
+  const buscarPorUsername = buscarUsuarios;
+  const enviarSolicitudAmistad = agregarAmigo;
 
   return {
     usuario,
@@ -377,14 +557,17 @@ export function useChat() {
     mensajes,
     nuevoMensaje,
     setNuevoMensaje,
-    cargandoIA,
     perfiles,
-    errorSalaEliminada,
+    solicitudesPendientes,
+    cargandoIA,
     enviarMensaje,
-    crearSala,
-    unirseASala,
     eliminarSala,
     mejorarMensajeIA,
     cerrarSesion,
+    buscarUsuarios,
+    agregarAmigo,
+    buscarPorUsername,
+    enviarSolicitudAmistad,
+    aceptarSolicitud,
   };
 }
