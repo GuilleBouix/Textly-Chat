@@ -51,9 +51,10 @@ Mensaje:
 ${text}`;
   }
 
-  return `Mejora el siguiente mensaje de chat ${idiomaTexto[idioma]}.
+  return `Mejora el siguiente mensaje de chat sin traducirlo.
 ${tonoDescripcion}
 Reglas:
+- Mantiene el idioma original del mensaje.
 - Mantiene el mismo significado e intencion.
 - Corrige redaccion, claridad y ortografia.
 - No agregues informacion nueva.

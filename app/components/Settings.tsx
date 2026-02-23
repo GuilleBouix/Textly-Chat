@@ -62,25 +62,25 @@ export default function Settings({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm animate-fade">
-      <div className="flex h-[520px] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl animate-flip-down animate-delay-50">
-        <div className="flex items-center justify-between border-b border-zinc-800 p-4 animate-fade-down animate-delay-none">
-          <h2 className="text-lg font-bold text-white animate-fade-right animate-delay-50">Asistente IA</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm">
+      <div className="flex h-auto w-full max-w-md flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl animate-fade-up">
+        <div className="flex items-center justify-between border-b border-zinc-800 p-4">
+          <h2 className="text-lg font-bold text-white">Asistente IA</h2>
           <button
             onClick={alCerrar}
-            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white animate-fade-left animate-delay-50"
+            className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
           >
             <LuX size={20} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-hidden p-4 animate-fade-up animate-delay-100">
+        <div className="flex-1 overflow-y-hidden p-4">
           <div className="space-y-5">
-            <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/50 p-4 animate-fade-up animate-delay-150">
+            <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/50 p-4">
               <div className="flex items-center gap-3">
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                    asistenteActivo ? "bg-blue-600" : "bg-zinc-800"
+                    asistenteActivo ? "bg-violet-500" : "bg-zinc-800"
                   }`}
                 >
                   <LuSparkles
@@ -89,7 +89,9 @@ export default function Settings({
                   />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">Asistente de IA</p>
+                  <p className="text-sm font-medium text-white">
+                    Asistente de IA
+                  </p>
                   <p className="text-xs text-zinc-500">
                     Mejora tus mensajes automaticamente
                   </p>
@@ -98,7 +100,7 @@ export default function Settings({
               <button
                 onClick={() => setAsistenteActivo(!asistenteActivo)}
                 className={`relative h-6 w-11 rounded-full transition-colors ${
-                  asistenteActivo ? "bg-blue-600" : "bg-zinc-700"
+                  asistenteActivo ? "bg-violet-500" : "bg-zinc-700"
                 }`}
               >
                 <span
@@ -109,7 +111,7 @@ export default function Settings({
               </button>
             </div>
 
-            <div className="animate-fade-up animate-delay-200">
+            <div>
               <label className="mb-2 block text-xs font-medium text-zinc-400">
                 Modo de redaccion
               </label>
@@ -118,7 +120,7 @@ export default function Settings({
                   onClick={() => setModoRedaccion("formal")}
                   className={`rounded-xl border p-3 text-sm font-medium transition-colors ${
                     modoRedaccion === "formal"
-                      ? "border-blue-500 bg-blue-600/20 text-blue-400"
+                      ? "border-violet-400 bg-violet-500/20 text-violet-300"
                       : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-zinc-600"
                   }`}
                 >
@@ -128,7 +130,7 @@ export default function Settings({
                   onClick={() => setModoRedaccion("informal")}
                   className={`rounded-xl border p-3 text-sm font-medium transition-colors ${
                     modoRedaccion === "informal"
-                      ? "border-blue-500 bg-blue-600/20 text-blue-400"
+                      ? "border-violet-400 bg-violet-500/20 text-violet-300"
                       : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-zinc-600"
                   }`}
                 >
@@ -137,14 +139,14 @@ export default function Settings({
               </div>
             </div>
 
-            <div className="animate-fade-up animate-delay-250">
+            <div>
               <label className="mb-2 block text-xs font-medium text-zinc-400">
                 Idioma de traduccion
               </label>
               <select
                 value={idioma}
                 onChange={(e) => setIdioma(e.target.value as Idioma)}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-sm text-white outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-sm text-white outline-none focus:border-violet-400"
               >
                 <option value="es">Espanol</option>
                 <option value="en">Ingles</option>
@@ -154,20 +156,19 @@ export default function Settings({
           </div>
         </div>
 
-        <div className="flex gap-3 border-t border-zinc-800 p-4 animate-fade-up animate-delay-300">
+        <div className="flex gap-3 border-t border-zinc-800 p-4">
           <button
             onClick={alCerrar}
-            className="flex-1 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700 animate-fade-right animate-delay-350"
+            className="flex-1 rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
           >
             Cancelar
           </button>
           <button
             onClick={handleGuardarIA}
             disabled={guardandoIA}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50 animate-fade-left animate-delay-350"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-violet-400 disabled:opacity-50"
           >
             {guardandoIA ? "Guardando..." : "Guardar"}
-            <LuCheck size={16} />
           </button>
         </div>
       </div>

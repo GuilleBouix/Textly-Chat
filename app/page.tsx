@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { LuMenu, LuSendHorizontal, LuUser } from "react-icons/lu";
+import { LuArrowLeft, LuSendHorizontal, LuUser } from "react-icons/lu";
 
 import AiAssistantMenu from "./components/AiAssistantMenu";
 import Modal from "./components/Modal";
@@ -56,7 +56,6 @@ export default function ChatPage() {
   const [mostrarModalBuscar, setMostrarModalBuscar] = useState(false);
   const [mostrarSettings, setMostrarSettings] = useState(false);
   const [idSalaAEliminar, setIdSalaAEliminar] = useState<string | null>(null);
-  const [sidebarMobileAbierto, setSidebarMobileAbierto] = useState(false);
 
   const finMensajesRef = useRef<HTMLDivElement | null>(null);
 
@@ -76,45 +75,45 @@ export default function ChatPage() {
   return (
     <div className="relative isolate flex h-screen overflow-hidden bg-[#09090b] text-zinc-100 animate-fade">
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(70rem_45rem_at_8%_-10%,rgba(37,99,235,0.22),transparent_58%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(58rem_36rem_at_88%_-8%,rgba(56,189,248,0.18),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(44rem_32rem_at_50%_108%,rgba(30,64,175,0.16),transparent_62%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(70rem_45rem_at_8%_-10%,rgba(139,92,246,0.22),transparent_58%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(58rem_36rem_at_88%_-8%,rgba(168,85,247,0.18),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(44rem_32rem_at_50%_108%,rgba(109,40,217,0.16),transparent_62%)]" />
       </div>
-      {sidebarMobileAbierto && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden animate-fade animate-delay-50"
-          onClick={() => setSidebarMobileAbierto(false)}
-        />
-      )}
 
       {cargando ? (
-        <SkeletonSidebar />
+        <div className={`${idSalaActiva ? "hidden md:block" : "block"}`}>
+          <SkeletonSidebar />
+        </div>
       ) : (
-        <Sidebar
-          usuario={usuario}
-          salas={salas}
-          idSalaActiva={idSalaActiva || ""}
-          perfiles={perfiles}
-          solicitudesPendientes={solicitudesPendientes}
-          solicitudesEnviadas={solicitudesEnviadas}
-          mensajesNoLeidos={mensajesNoLeidos}
-          alSeleccionarSala={(id) => {
-            setIdSalaActiva(id);
-            marcarChatComoLeido(id);
-            setSidebarMobileAbierto(false);
-          }}
-          alEliminarSala={setIdSalaAEliminar}
-          alAceptarSolicitud={aceptarSolicitud}
-          alCancelarSolicitud={cancelarSolicitud}
-          abrirModalBuscar={() => setMostrarModalBuscar(true)}
-          abrirSettings={() => setMostrarSettings(true)}
-          alCerrarSesion={cerrarSesion}
-        />
+        <div className={`${idSalaActiva ? "hidden md:flex" : "flex"} h-full`}>
+          <Sidebar
+            usuario={usuario}
+            salas={salas}
+            idSalaActiva={idSalaActiva || ""}
+            perfiles={perfiles}
+            solicitudesPendientes={solicitudesPendientes}
+            solicitudesEnviadas={solicitudesEnviadas}
+            mensajesNoLeidos={mensajesNoLeidos}
+            alSeleccionarSala={(id) => {
+              setIdSalaActiva(id);
+              marcarChatComoLeido(id);
+            }}
+            alEliminarSala={setIdSalaAEliminar}
+            alAceptarSolicitud={aceptarSolicitud}
+            alCancelarSolicitud={cancelarSolicitud}
+            abrirModalBuscar={() => setMostrarModalBuscar(true)}
+            abrirSettings={() => setMostrarSettings(true)}
+            alCerrarSesion={cerrarSesion}
+            mostrarTabsMobile
+          />
+        </div>
       )}
 
-      <section className="relative flex min-w-0 flex-1 flex-col bg-transparent animate-fade animate-delay-50">
+      <section
+        className={`relative min-w-0 flex-1 flex-col bg-transparent animate-fade animate-delay-50 ${idSalaActiva ? "flex" : "hidden md:flex"}`}
+      >
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(36rem_24rem_at_75%_0%,rgba(59,130,246,0.12),transparent_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(36rem_24rem_at_75%_0%,rgba(167,139,250,0.12),transparent_70%)]" />
           <div className="absolute inset-0 bg-linear-to-b from-transparent via-zinc-950/10 to-zinc-950/25" />
         </div>
         {cargando ? (
@@ -125,9 +124,10 @@ export default function ChatPage() {
               <div className="flex items-center gap-3 animate-fade animate-delay-150">
                 <button
                   className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 md:hidden"
-                  onClick={() => setSidebarMobileAbierto(true)}
+                  onClick={() => setIdSalaActiva(null)}
+                  aria-label="Volver a chats"
                 >
-                  <LuMenu />
+                  <LuArrowLeft />
                 </button>
 
                 <div className="flex items-center gap-3">
@@ -138,10 +138,10 @@ export default function ChatPage() {
                         `https://ui-avatars.com/api/?name=${perfilAmigo?.username || "U"}`
                       }
                       alt={perfilAmigo.username || "Contacto"}
-                      className="h-10 w-10 rounded-full border border-blue-500/30 object-cover"
+                      className="h-10 w-10 rounded-full border border-violet-400/30 object-cover"
                     />
                   ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-500/30 bg-blue-600/20 font-bold text-blue-400">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-violet-400/30 bg-violet-500/20 font-bold text-violet-300">
                       {perfilAmigo?.username?.charAt(0).toUpperCase() || (
                         <LuUser />
                       )}
@@ -183,12 +183,12 @@ export default function ChatPage() {
                     <div
                       className={`relative max-w-[85%] rounded-2xl p-3 shadow-md ${
                         esMio
-                          ? "rounded-tr-none border border-blue-400/30 bg-zinc-900/85 text-zinc-100 shadow-lg shadow-blue-950/30 backdrop-blur-sm"
+                          ? "rounded-tr-none border border-violet-400/30 bg-zinc-900/85 text-zinc-100 shadow-lg shadow-violet-950/30 backdrop-blur-sm"
                           : "rounded-tl-none border border-zinc-600/70 bg-zinc-900/80 text-zinc-100 shadow-lg shadow-black/25 backdrop-blur-sm"
                       }`}
                     >
                       {esMio && (
-                        <div className="pointer-events-none absolute inset-0 rounded-2xl rounded-tr-none bg-linear-to-br from-blue-400/10 via-transparent to-cyan-400/5" />
+                        <div className="pointer-events-none absolute inset-0 rounded-2xl rounded-tr-none bg-linear-to-br from-violet-400/10 via-transparent to-violet-300/5" />
                       )}
                       {!esMio && (
                         <div className="pointer-events-none absolute inset-0 rounded-2xl rounded-tl-none bg-linear-to-br from-white/8 via-transparent to-white/3" />
@@ -202,7 +202,7 @@ export default function ChatPage() {
                         {msg.content}
                       </p>
                       <p
-                        className={`relative mt-1 text-[9px] opacity-60 ${esMio ? "text-right text-blue-200/75" : "text-left"}`}
+                        className={`relative mt-1 text-[9px] opacity-60 ${esMio ? "text-right text-violet-200/75" : "text-left"}`}
                       >
                         {formatearHora(msg.created_at)}
                       </p>
@@ -222,11 +222,12 @@ export default function ChatPage() {
             </main>
 
             <footer className="relative z-10 p-3 animate-fade animate-delay-250 sm:p-4">
+              <div className="pointer-events-none absolute -top-10 left-0 right-0 h-10 bg-linear-to-b from-transparent to-zinc-950/45" />
               <div className="relative animate-fade animate-delay-300">
                 {cargandoIA && (
-                  <div className="pointer-events-none absolute -top-14 left-1/2 z-10 -translate-x-1/2 rounded-xl border border-blue-500/40 bg-zinc-900/95 px-4 py-2 shadow-lg shadow-blue-900/30 backdrop-blur-sm">
-                    <div className="flex items-center gap-2 text-xs font-medium text-blue-200">
-                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-300/40 border-t-blue-300" />
+                  <div className="pointer-events-none absolute -top-14 left-1/2 z-10 -translate-x-1/2 rounded-xl border border-violet-400/40 bg-zinc-900/95 px-4 py-2 shadow-lg shadow-violet-900/30 backdrop-blur-sm">
+                    <div className="flex items-center gap-2 text-xs font-medium text-violet-200">
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-300/40 border-t-violet-300" />
                       <span className="inline-flex items-center">
                         {accionIAActiva === "translate"
                           ? "Traduciendo mensaje"
@@ -247,9 +248,9 @@ export default function ChatPage() {
 
                 <form
                   onSubmit={enviarMensaje}
-                  className="group relative flex items-center gap-2 rounded-2xl border border-zinc-700/60 bg-zinc-900/70 px-3 py-2 shadow-lg shadow-black/20 backdrop-blur-md transition-all duration-200  focus-within:ring-1 focus-within:ring-blue-400/30 focus-within:shadow-blue-900/30"
+                  className="relative flex items-center gap-2 rounded-2xl border border-zinc-700/60 bg-zinc-900/70 px-3 py-2 shadow shadow-black/20 backdrop-blur-md transition-all duration-200 focus-within:ring-1 focus-within:ring-violet-400/30 focus-within:shadow-violet-900/30"
                 >
-                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-linear-to-r from-blue-500/6 via-transparent to-cyan-400/6 opacity-70" />
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-linear-to-r from-violet-400/6 via-transparent to-violet-300/6 opacity-70" />
                   <input
                     value={nuevoMensaje}
                     onChange={(e) => setNuevoMensaje(e.target.value)}
@@ -265,7 +266,7 @@ export default function ChatPage() {
                     />
                   )}
 
-                  <button className="relative z-10 flex cursor-pointer items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/30 transition-all hover:bg-blue-500">
+                  <button className="relative z-10 flex cursor-pointer items-center gap-2 rounded-2xl bg-violet-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-violet-900/30 transition-all hover:bg-violet-400">
                     Enviar
                     <LuSendHorizontal />
                   </button>
@@ -275,12 +276,12 @@ export default function ChatPage() {
           </>
         ) : (
           <div className="relative flex flex-1 items-center justify-center overflow-hidden p-6 animate-fade-up animate-delay-100 sm:p-8">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(59,130,246,0.2),transparent_52%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(167,139,250,0.2),transparent_52%)]" />
             <div className="pointer-events-none absolute inset-x-0 top-1/2 h-56 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(2,6,23,0.28),transparent_72%)]" />
 
             <div className="relative w-full max-w-2xl text-center animate-fade-up animate-delay-150">
-              <div className="relative mx-auto mb-7 flex h-50 w-50 items-center justify-center rounded-4xl border border-blue-400/25 bg-zinc-900/30 p-5 backdrop-blur-sm animate-flip-up animate-delay-200">
-                <div className="pointer-events-none absolute inset-0 rounded-4xl bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.24),transparent_55%)]" />
+              <div className="relative mx-auto mb-7 flex h-50 w-50 items-center justify-center rounded-4xl border border-violet-400/25 bg-zinc-900/30 p-5 backdrop-blur-sm animate-flip-up animate-delay-200">
+                <div className="pointer-events-none absolute inset-0 rounded-4xl bg-[radial-gradient(circle_at_30%_20%,rgba(168,85,247,0.24),transparent_55%)]" />
                 <img
                   src="/logo.svg"
                   alt="Textly Chat"
@@ -288,7 +289,7 @@ export default function ChatPage() {
                 />
               </div>
 
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.26em] text-blue-300/90 animate-fade-up animate-delay-300">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.26em] text-violet-300/90 animate-fade-up animate-delay-300">
                 Textly Chat
               </p>
               <h2 className="text-balance text-3xl font-black leading-tight text-zinc-100 [text-shadow:0_2px_16px_rgba(2,6,23,0.55)] animate-fade-up animate-delay-350 sm:text-4xl">
@@ -311,16 +312,13 @@ export default function ChatPage() {
       >
         <UserSearch
           onBuscar={buscarUsuarios}
-          onAgregar={async (id) => {
-            await agregarAmigo(id);
-            setMostrarModalBuscar(false);
-          }}
+          onAgregar={(id) => agregarAmigo(id)}
           alCerrar={() => setMostrarModalBuscar(false)}
         />
       </Modal>
 
       <Modal
-        titulo="Eliminar chat?"
+        titulo="Eliminar chat"
         descripcion="Se borraran todos los mensajes de esta conversacion."
         abierto={!!idSalaAEliminar}
         alCerrar={() => setIdSalaAEliminar(null)}
@@ -328,7 +326,7 @@ export default function ChatPage() {
           if (idSalaAEliminar) eliminarSala(idSalaAEliminar);
           setIdSalaAEliminar(null);
         }}
-        colorBoton="bg-red-600"
+        colorBoton="bg-red-500 hover:bg-red-400 shadow-lg shadow-red-900/30"
         textoConfirmar="Eliminar"
       />
 

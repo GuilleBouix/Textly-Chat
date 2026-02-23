@@ -9,9 +9,9 @@ body {
 body {
   background-color: #09090b;
   background-image:
-    radial-gradient(65rem 42rem at 12% -10%, rgba(37, 99, 235, 0.2), transparent 58%),
-    radial-gradient(58rem 36rem at 85% -5%, rgba(56, 189, 248, 0.16), transparent 60%),
-    radial-gradient(42rem 32rem at 50% 110%, rgba(30, 64, 175, 0.15), transparent 62%);
+    radial-gradient(65rem 42rem at 12% -10%, rgba(139, 92, 246, 0.2), transparent 58%),
+    radial-gradient(58rem 36rem at 85% -5%, rgba(168, 85, 247, 0.16), transparent 60%),
+    radial-gradient(42rem 32rem at 50% 110%, rgba(109, 40, 217, 0.15), transparent 62%);
   background-attachment: fixed;
   color: #f4f4f5;
 }

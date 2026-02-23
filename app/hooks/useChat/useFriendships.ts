@@ -64,14 +64,17 @@ export function useFriendships({
   }, [userId, cargarPerfiles]);
 
   // Agrega un amigo/envia solicitud
-  const agregarAmigo = async (amigoId: string) => {
-    if (!userId) return;
+  const agregarAmigo = async (amigoId: string): Promise<boolean> => {
+    if (!userId) {
+      debug("agregarAmigo:skip", { reason: "missing-user-id" });
+      return false;
+    }
 
     debug("agregarAmigo:start", { usuarioId: userId, amigoId });
 
     if (amigoId === userId) {
       debug("agregarAmigo:skip", { reason: "self-friendship" });
-      return;
+      return false;
     }
 
     await authService.getSession();
@@ -98,15 +101,35 @@ export function useFriendships({
           setIdSalaActiva(salaExistente.id);
           await cargarPerfiles([amigoId]);
           debug("agregarAmigo:end", { action: "open-existing-room" });
-          return;
+          return true;
         }
+        const nuevaSala = await roomsService.createRoom(userId, amigoId);
+        if (nuevaSala) {
+          setSalas((prev) =>
+            prev.some((sala) => sala.id === nuevaSala.id)
+              ? prev
+              : [nuevaSala, ...prev],
+          );
+          setIdSalaActiva(nuevaSala.id);
+        }
+        await cargarPerfiles([amigoId]);
+        debug("agregarAmigo:end", { action: "create-room-for-accepted-friendship" });
+        return true;
       }
 
       if (amistadExistente.status === "pending") {
         await cargarSolicitudes();
+        debug("agregarAmigo:end", { action: "already-pending" });
+        return true;
       }
+
+      if (amistadExistente.status === "blocked") {
+        debug("agregarAmigo:blocked", { friendshipId: amistadExistente.id });
+        return false;
+      }
+
       debug("agregarAmigo:end", { action: "friendship-already-exists" });
-      return;
+      return false;
     }
 
     const payload = {
@@ -134,6 +157,7 @@ export function useFriendships({
     await cargarSolicitudes();
     debug("friendships.insert:ok");
     debug("agregarAmigo:end", { action: "request-sent" });
+    return true;
   };
 
   // Acepta una solicitud de amistad

@@ -60,8 +60,8 @@ export interface UseChatActions {
   traducirMensajeIA: () => Promise<void>;
   buscarUsuarios: (username: string) => Promise<PerfilBusqueda[]>;
   buscarPorUsername: (username: string) => Promise<PerfilBusqueda[]>;
-  agregarAmigo: (amigoId: string) => Promise<void>;
-  enviarSolicitudAmistad: (amigoId: string) => Promise<void>;
+  agregarAmigo: (amigoId: string) => Promise<boolean>;
+  enviarSolicitudAmistad: (amigoId: string) => Promise<boolean>;
   aceptarSolicitud: (solicitudId: string, emisorId: string) => Promise<void>;
   cancelarSolicitud: (solicitudId: string) => Promise<void>;
   marcarChatComoLeido: (idSala: string) => void;

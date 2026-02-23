@@ -50,8 +50,8 @@ export default function LoginPage() {
     <main className="relative min-h-screen overflow-hidden bg-transparent text-slate-100 animate-fade">
       {/* Fondo con efectos de gradiente */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-36 left-1/2 h-112 w-md -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="absolute -top-36 left-1/2 h-112 w-md -translate-x-1/2 rounded-full bg-violet-400/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 h-64 w-64 rounded-full bg-violet-500/20 blur-3xl" />
         <div className="absolute right-1/4 top-1/3 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
       </div>
 

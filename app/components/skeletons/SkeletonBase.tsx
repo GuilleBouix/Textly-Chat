@@ -5,7 +5,7 @@ export function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`animate-pulse animate-fade rounded-md border border-zinc-700/30 bg-zinc-700/35 ${className}`}
+      className={`animate-pulse rounded-md border border-zinc-700/30 bg-zinc-700/35 ${className}`}
       {...props}
     />
   );
