@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "tailwindcss-animated";
 
+html,
+body {
+  min-height: 100dvh;
+}
+
+body {
+  background-color: #09090b;
+  background-image:
+    radial-gradient(65rem 42rem at 12% -10%, rgba(37, 99, 235, 0.2), transparent 58%),
+    radial-gradient(58rem 36rem at 85% -5%, rgba(56, 189, 248, 0.16), transparent 60%),
+    radial-gradient(42rem 32rem at 50% 110%, rgba(30, 64, 175, 0.15), transparent 62%);
+  background-attachment: fixed;
+  color: #f4f4f5;
+}
+
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #3f3f46 transparent;

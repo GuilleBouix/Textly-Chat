@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { debugError } from "../../lib/debug";
 import { messagesService } from "../../services/messagesService";
 import type { Mensaje, Sala } from "../../types/database";
 import type { PerfilLoader } from "./types";
+import { localCache } from "../../lib/localCache";
 
 // ============================================
 // HOOK DE MENSAJES
@@ -16,6 +17,11 @@ interface UseMessagesProps {
   salas: Sala[];
   cargarPerfiles: PerfilLoader;
 }
+
+const CACHE_MENSAJES_MS = 1000 * 60 * 60 * 12;
+const MAX_MENSAJES_CACHE = 120;
+const getMensajesCacheKey = (userId: string, roomId: string) =>
+  `textly:messages:${userId}:${roomId}`;
 
 // ============================================
 // HOOK
@@ -47,13 +53,19 @@ export function useMessages({
   // ============================================
 
   // Carga mensajes de una sala
-  const cargarMensajes = async (roomId: string) => {
+  const cargarMensajes = useCallback(async (roomId: string) => {
     const data = await messagesService.getByRoom(roomId);
     setMensajes(data);
+    if (userId) {
+      localCache.write(
+        getMensajesCacheKey(userId, roomId),
+        data.slice(-MAX_MENSAJES_CACHE),
+      );
+    }
 
     const idsEmisores = data.map((m) => m.sender_id);
     await cargarPerfiles(idsEmisores);
-  };
+  }, [userId, cargarPerfiles]);
 
   // Envia un mensaje a la sala activa
   const enviarMensaje = async (e: React.FormEvent) => {
@@ -104,9 +116,34 @@ export function useMessages({
       setMensajes([]);
       return;
     }
+
     setMensajesNoLeidos((prev) => ({ ...prev, [idSalaActiva]: 0 }));
-    cargarMensajes(idSalaActiva);
-  }, [idSalaActiva]);
+
+    if (userId) {
+      const cache = localCache.read<Mensaje[]>(
+        getMensajesCacheKey(userId, idSalaActiva),
+        CACHE_MENSAJES_MS,
+      );
+      if (cache) {
+        setMensajes(cache);
+        void cargarPerfiles(cache.map((m) => m.sender_id));
+      } else {
+        setMensajes([]);
+      }
+    } else {
+      setMensajes([]);
+    }
+
+    void cargarMensajes(idSalaActiva);
+  }, [idSalaActiva, userId, cargarMensajes, cargarPerfiles]);
+
+  useEffect(() => {
+    if (!userId || !idSalaActiva) return;
+    localCache.write(
+      getMensajesCacheKey(userId, idSalaActiva),
+      mensajes.slice(-MAX_MENSAJES_CACHE),
+    );
+  }, [userId, idSalaActiva, mensajes]);
 
   // Suscripcion a mensajes en tiempo real
   useEffect(() => {

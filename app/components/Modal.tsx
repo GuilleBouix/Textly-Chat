@@ -38,27 +38,27 @@ export default function Modal({
   // ============================================
   return (
     // Overlay oscuro
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-fade">
       {/* Contenedor del modal */}
-      <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+      <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-flip-down animate-delay-50">
         {/* Header con titulo y descripcion */}
-        <div className="p-6">
-          <h3 className="text-lg font-bold mb-1 text-white">{titulo}</h3>
-          <p className="text-sm text-zinc-400 mb-4">{descripcion}</p>
+        <div className="p-6 animate-fade-down animate-delay-none">
+          <h3 className="text-lg font-bold mb-1 text-white animate-fade-right animate-delay-50">{titulo}</h3>
+          <p className="text-sm text-zinc-400 mb-4 animate-fade-right animate-delay-100">{descripcion}</p>
           {children}
         </div>
 
         {/* Footer con botones de accion */}
-        <div className="flex p-4 bg-zinc-950 gap-3">
+        <div className="flex p-4 bg-zinc-950 gap-3 animate-fade-up animate-delay-150">
           <button
             onClick={alCerrar}
-            className="flex-1 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium transition-colors"
+            className="flex-1 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium transition-colors animate-fade-right animate-delay-200"
           >
             Cancelar
           </button>
           <button
             onClick={alConfirmar}
-            className={`flex-1 px-4 py-2 rounded-xl text-white font-bold text-sm transition-colors ${colorBoton}`}
+            className={`flex-1 px-4 py-2 rounded-xl text-white font-bold text-sm transition-colors animate-fade-left animate-delay-200 ${colorBoton}`}
           >
             {textoConfirmar}
           </button>

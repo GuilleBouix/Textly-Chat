@@ -73,9 +73,9 @@ export default function UserSearch({
   // RENDERIZADO
   // ============================================
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 animate-fade-up animate-delay-100">
       {/* Input de busqueda */}
-      <form onSubmit={ejecutarBusqueda} className="relative">
+      <form onSubmit={ejecutarBusqueda} className="relative animate-fade-down animate-delay-150">
         <input
           autoFocus
           value={query}
@@ -93,10 +93,10 @@ export default function UserSearch({
       </form>
 
       {/* Resultados de la busqueda */}
-      <div className="space-y-2 max-h-75 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="space-y-2 max-h-75 overflow-y-auto pr-2 custom-scrollbar animate-fade-up animate-delay-200">
         {/* Aviso de solicitud enviada */}
         {aviso && (
-          <div className="rounded-xl border border-green-600/30 bg-green-600/10 px-3 py-2 text-xs font-medium text-green-400">
+          <div className="rounded-xl border border-green-600/30 bg-green-600/10 px-3 py-2 text-xs font-medium text-green-400 animate-fade-down animate-delay-250">
             {aviso}
           </div>
         )}
@@ -105,7 +105,7 @@ export default function UserSearch({
         {resultados.map((user) => (
           <div
             key={user.id}
-            className="flex items-center justify-between p-3 bg-zinc-900/40 rounded-xl border border-zinc-800/50 hover:bg-zinc-900 transition-colors"
+            className="flex items-center justify-between p-3 bg-zinc-900/40 rounded-xl border border-zinc-800/50 hover:bg-zinc-900 transition-colors animate-fade-up animate-delay-250"
           >
             {/* Avatar y nombre del usuario */}
             <div className="flex items-center gap-3">
@@ -147,7 +147,7 @@ export default function UserSearch({
 
         {/* Mensaje cuando no se encuentran resultados */}
         {resultados.length === 0 && query && !buscando && (
-          <div className="text-center py-8">
+          <div className="text-center py-8 animate-fade-up animate-delay-300">
             <p className="text-zinc-500 text-sm">No se encontro a {query}</p>
             <p className="text-zinc-700 text-[10px] uppercase mt-1">
               Verifica que el nombre sea exacto

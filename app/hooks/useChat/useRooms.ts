@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { roomsService } from "../../services/roomsService";
 import type { Sala } from "../../types/database";
 import type { PerfilLoader } from "./types";
+import { localCache } from "../../lib/localCache";
 
 // ============================================
 // HOOK DE SALAS
@@ -14,11 +15,16 @@ interface UseRoomsProps {
   cargarPerfiles: PerfilLoader;
 }
 
+const CACHE_SALAS_MS = 1000 * 60 * 60 * 24;
+const getSalasCacheKey = (uid: string) => `textly:rooms:${uid}`;
+
 // ============================================
 // HOOK
 // ============================================
 
 export function useRooms({ userId, cargarPerfiles }: UseRoomsProps) {
+  const [cacheHidratada, setCacheHidratada] = useState(false);
+
   // ============================================
   // ESTADOS
   // ============================================
@@ -38,6 +44,7 @@ export function useRooms({ userId, cargarPerfiles }: UseRoomsProps) {
     if (!userId) return [];
     const salasData = await roomsService.getRoomsByUser(userId);
     setSalas(salasData);
+    localCache.write(getSalasCacheKey(userId), salasData);
     return salasData;
   }, [userId]);
 
@@ -74,10 +81,34 @@ export function useRooms({ userId, cargarPerfiles }: UseRoomsProps) {
 
   // Carga inicial de salas
   useEffect(() => {
+    if (!userId) {
+      setSalas([]);
+      setIdSalaActiva(null);
+      setCacheHidratada(false);
+      return;
+    }
+
+    const cache = localCache.read<Sala[]>(
+      getSalasCacheKey(userId),
+      CACHE_SALAS_MS,
+    );
+    if (cache) {
+      setSalas(cache);
+      setIdSalaActiva((prev) => prev ?? cache[0]?.id ?? null);
+    }
+    setCacheHidratada(true);
+  }, [userId]);
+
+  useEffect(() => {
     if (userId) {
-      cargarSalas();
+      void cargarSalas();
     }
   }, [userId, cargarSalas]);
+
+  useEffect(() => {
+    if (!userId || !cacheHidratada) return;
+    localCache.write(getSalasCacheKey(userId), salas);
+  }, [userId, salas, cacheHidratada]);
 
   // Suscripcion a nuevas salas en tiempo real
   useEffect(() => {

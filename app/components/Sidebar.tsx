@@ -1,6 +1,13 @@
 "use client";
 
-import { LuCheck, LuLogOut, LuUserPlus, LuUsers, LuSettings } from "react-icons/lu";
+import {
+  LuCheck,
+  LuLogOut,
+  LuTrash2,
+  LuUserPlus,
+  LuUsers,
+  LuSettings,
+} from "react-icons/lu";
 
 import { Sala, UsuarioSupabase } from "../types/database";
 import { normalizeAvatarUrl } from "../lib/avatar";
@@ -63,7 +70,8 @@ export default function Sidebar({
   alCerrarSesion,
 }: SidebarProps) {
   const userMeta = (usuario?.user_metadata ?? {}) as Record<string, unknown>;
-  const fullName = typeof userMeta.full_name === "string" ? userMeta.full_name : null;
+  const fullName =
+    typeof userMeta.full_name === "string" ? userMeta.full_name : null;
   const genericName = typeof userMeta.name === "string" ? userMeta.name : null;
   const metaAvatar =
     (typeof userMeta.avatar_url === "string" && userMeta.avatar_url) ||
@@ -73,10 +81,7 @@ export default function Sidebar({
     null;
 
   const nombrePropio =
-    fullName ||
-    genericName ||
-    usuario?.email?.split("@")[0] ||
-    "Usuario";
+    fullName || genericName || usuario?.email?.split("@")[0] || "Usuario";
   const avatarPropio =
     normalizeAvatarUrl(metaAvatar) ||
     `https://ui-avatars.com/api/?name=${usuario?.email || "U"}`;
@@ -84,9 +89,9 @@ export default function Sidebar({
   // RENDERIZADO
   // ============================================
   return (
-    <aside className="flex h-full w-80 flex-col border-r border-zinc-900 bg-zinc-950">
+    <aside className="flex h-full w-80 flex-col border-r border-zinc-800/80 bg-zinc-950/72 backdrop-blur-md animate-fade-right">
       {/* Header con perfil del usuario */}
-      <div className="flex items-center gap-3 border-b border-zinc-900 bg-zinc-900/20 p-5">
+      <div className="flex items-center gap-3 border-b border-zinc-800/70 bg-zinc-900/35 p-5 animate-fade-right animate-delay-none">
         {/* Avatar del usuario */}
         <img
           src={avatarPropio}
@@ -125,7 +130,7 @@ export default function Sidebar({
       </div>
 
       {/* Boton para buscar contactos */}
-      <div className="p-4">
+      <div className="p-4 animate-fade-right animate-delay-50">
         <button
           onClick={abrirModalBuscar}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/10 transition-all hover:bg-blue-500"
@@ -136,9 +141,9 @@ export default function Sidebar({
       </div>
 
       {/* Contenido scrolleable */}
-      <div className="flex-1 overflow-y-auto px-3 pb-4">
+      <div className="flex-1 overflow-y-auto px-3 pb-4 animate-fade-right animate-delay-100">
         {/* Seccion de solicitudes */}
-        <div className="mb-2 flex items-center gap-2 px-2">
+        <div className="mb-2 flex items-center gap-2 px-2 animate-fade-right animate-delay-150">
           <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
             Solicitudes
           </p>
@@ -159,7 +164,7 @@ export default function Sidebar({
             return (
               <div
                 key={solicitud.id}
-                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-2"
+                className="flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/45 p-2 backdrop-blur-sm animate-fade-right animate-delay-200"
               >
                 <div className="flex min-w-0 items-center gap-2 pr-2">
                   <img
@@ -198,7 +203,7 @@ export default function Sidebar({
             return (
               <div
                 key={solicitud.id}
-                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-2"
+                className="flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/45 p-2 backdrop-blur-sm animate-fade-right animate-delay-250"
               >
                 <div className="flex min-w-0 items-center gap-2 pr-2">
                   <img
@@ -242,7 +247,7 @@ export default function Sidebar({
         </div>
 
         {/* Seccion de chats */}
-        <div className="mb-4 flex items-center gap-2 px-2">
+        <div className="mb-4 flex items-center gap-2 px-2 animate-fade-right animate-delay-300">
           <LuUsers size={14} className="text-zinc-500" />
           <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
             Mis Chats
@@ -265,10 +270,10 @@ export default function Sidebar({
               <div
                 key={sala.id}
                 onClick={() => alSeleccionarSala(sala.id)}
-                className={`group flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${
+                className={`group flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all animate-fade-right animate-delay-350 ${
                   idSalaActiva === sala.id
-                    ? "border-zinc-800 bg-zinc-900"
-                    : "border-transparent bg-transparent hover:border-zinc-800/50 hover:bg-zinc-900/50"
+                    ? "border-zinc-700/90 bg-zinc-900/75 backdrop-blur-sm"
+                    : "border-transparent bg-transparent hover:border-zinc-800/60 hover:bg-zinc-900/45"
                 }`}
               >
                 {/* Avatar con indicador de online */}
@@ -282,7 +287,7 @@ export default function Sidebar({
                     alt="avatar"
                   />
 
-                  <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-zinc-950 bg-green-500" />
+                  <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-zinc-900 bg-green-500" />
                 </div>
 
                 {/* Nombre y badge de no leidos */}
@@ -320,10 +325,10 @@ export default function Sidebar({
                   }}
                   className="p-2 text-zinc-600 opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
                 >
-                  <LuLogOut
-                    size={14}
-                    className="rotate-180"
+                  <LuTrash2
+                    size={16}
                     title="Eliminar chat"
+                    className="cursor-pointer"
                   />
                 </button>
               </div>
@@ -332,7 +337,7 @@ export default function Sidebar({
 
           {/* Mensaje cuando no hay chats */}
           {salas.length === 0 && (
-            <div className="px-4 py-10 text-center">
+            <div className="px-4 py-10 text-center animate-fade-right animate-delay-400">
               <p className="text-xs italic text-zinc-600">
                 Aun no tienes chats.
               </p>

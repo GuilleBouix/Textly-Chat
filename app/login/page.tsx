@@ -47,7 +47,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <main className="relative min-h-screen overflow-hidden bg-transparent text-slate-100 animate-fade">
       {/* Fondo con efectos de gradiente */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-36 left-1/2 h-112 w-md -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
@@ -56,18 +56,18 @@ export default function LoginPage() {
       </div>
 
       {/* Contenedor principal centrado */}
-      <section className="relative mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
+      <section className="relative mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-4 py-8 animate-fade-up animate-delay-50 sm:px-6 sm:py-12">
         {/* Tarjeta de login */}
-        <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl sm:max-w-md sm:p-10">
+        <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl animate-fade-up animate-delay-100 sm:max-w-md sm:p-10">
           {/* Encabezado */}
           <div className="mb-8 space-y-4 text-center">
-            <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium tracking-wide text-slate-200">
+            <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium tracking-wide text-slate-200 animate-fade-down animate-delay-150">
               Bienvenido a Textly
             </span>
-            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+            <h1 className="text-4xl font-semibold tracking-tight animate-fade-up animate-delay-200 sm:text-5xl">
               Inicia sesion
             </h1>
-            <p className="text-sm text-slate-300 sm:text-base">
+            <p className="text-sm text-slate-300 animate-fade-up animate-delay-250 sm:text-base">
               Accede a tus chats en segundos con una experiencia rapida y
               segura.
             </p>
@@ -76,7 +76,7 @@ export default function LoginPage() {
           {/* Boton de login con Google */}
           <button
             onClick={manejarLoginGoogle}
-            className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-semibold text-slate-900 transition hover:scale-[1.01] hover:bg-slate-100 active:scale-[0.99]"
+            className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-semibold text-slate-900 transition hover:scale-[1.01] hover:bg-slate-100 active:scale-[0.99] animate-fade-up animate-delay-300"
           >
             {/* Icono de Google */}
             <svg
@@ -106,7 +106,7 @@ export default function LoginPage() {
           </button>
 
           {/* Nota legal */}
-          <p className="mt-5 text-center text-xs text-slate-400">
+          <p className="mt-5 text-center text-xs text-slate-400 animate-fade-up animate-delay-350">
             Al continuar aceptas nuestros terminos y politicas de privacidad.
           </p>
         </div>

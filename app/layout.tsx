@@ -1,5 +1,13 @@
-import { Metadata } from "next";
+import localFont from "next/font/local";
+
 import "./globals.css";
+
+const inter = localFont({
+  src: "../public/fonts/Inter-VariableFont.ttf",
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
+});
 
 export default function RootLayout({
   children,
@@ -14,7 +22,7 @@ export default function RootLayout({
         <link rel="shortcut icon" href="logo.svg" type="image/x-icon" />
         <title>Textly | Chat Asistido</title>
       </head>
-      <body>{children}</body>
+      <body className={`${inter.className} antialiased`}>{children}</body>
     </html>
   );
 }

@@ -74,10 +74,15 @@ export default function ChatPage() {
   const perfilAmigo = idAmigo ? perfiles[idAmigo] : null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950 font-sans text-zinc-100">
+    <div className="relative isolate flex h-screen overflow-hidden bg-[#09090b] text-zinc-100 animate-fade">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(70rem_45rem_at_8%_-10%,rgba(37,99,235,0.22),transparent_58%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(58rem_36rem_at_88%_-8%,rgba(56,189,248,0.18),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(44rem_32rem_at_50%_108%,rgba(30,64,175,0.16),transparent_62%)]" />
+      </div>
       {sidebarMobileAbierto && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-30 bg-black/50 md:hidden animate-fade animate-delay-50"
           onClick={() => setSidebarMobileAbierto(false)}
         />
       )}
@@ -107,13 +112,17 @@ export default function ChatPage() {
         />
       )}
 
-      <section className="relative flex min-w-0 flex-1 flex-col bg-zinc-950">
+      <section className="relative flex min-w-0 flex-1 flex-col bg-transparent animate-fade animate-delay-50">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(36rem_24rem_at_75%_0%,rgba(59,130,246,0.12),transparent_70%)]" />
+          <div className="absolute inset-0 bg-linear-to-b from-transparent via-zinc-950/10 to-zinc-950/25" />
+        </div>
         {cargando ? (
           <SkeletonChat />
         ) : idSalaActiva ? (
           <>
-            <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950/50 p-3 backdrop-blur-md sm:p-4">
-              <div className="flex items-center gap-3">
+            <header className="relative z-10 flex items-center justify-between border-b border-zinc-800 bg-zinc-950/55 p-3 backdrop-blur-md animate-fade animate-delay-100 sm:p-4">
+              <div className="flex items-center gap-3 animate-fade animate-delay-150">
                 <button
                   className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 md:hidden"
                   onClick={() => setSidebarMobileAbierto(true)}
@@ -133,18 +142,24 @@ export default function ChatPage() {
                     />
                   ) : (
                     <div className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-500/30 bg-blue-600/20 font-bold text-blue-400">
-                      {perfilAmigo?.username?.charAt(0).toUpperCase() || <LuUser />}
+                      {perfilAmigo?.username?.charAt(0).toUpperCase() || (
+                        <LuUser />
+                      )}
                     </div>
                   )}
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">Chat con</p>
-                    <h2 className="text-sm font-bold text-zinc-100">{perfilAmigo?.username || "Cargando..."}</h2>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500">
+                      Chat con
+                    </p>
+                    <h2 className="text-sm font-bold text-zinc-100">
+                      {perfilAmigo?.username || "Cargando..."}
+                    </h2>
                   </div>
                 </div>
               </div>
             </header>
 
-            <main className="custom-scrollbar flex-1 space-y-4 overflow-y-auto p-3 sm:p-4">
+            <main className="custom-scrollbar relative z-10 flex-1 space-y-4 overflow-y-auto bg-zinc-950/15 p-3 animate-fade animate-delay-150 sm:p-4">
               {mensajes.map((msg) => {
                 const esMio = msg.sender_id === usuario?.id;
                 const perfilEmisor = perfiles[msg.sender_id];
@@ -155,7 +170,7 @@ export default function ChatPage() {
                 return (
                   <div
                     key={msg.id}
-                    className={`flex items-start gap-2 ${esMio ? "justify-end" : "justify-start"}`}
+                    className={`flex items-start gap-2 animate-fade animate-delay-200 ${esMio ? "justify-end" : "justify-start"}`}
                   >
                     {!esMio && (
                       <img
@@ -168,15 +183,27 @@ export default function ChatPage() {
                     <div
                       className={`relative max-w-[85%] rounded-2xl p-3 shadow-md ${
                         esMio
-                          ? "rounded-tr-none bg-blue-600 text-white"
-                          : "rounded-tl-none border border-zinc-700 bg-zinc-800 text-zinc-200"
+                          ? "rounded-tr-none border border-blue-400/30 bg-zinc-900/85 text-zinc-100 shadow-lg shadow-blue-950/30 backdrop-blur-sm"
+                          : "rounded-tl-none border border-zinc-600/70 bg-zinc-900/80 text-zinc-100 shadow-lg shadow-black/25 backdrop-blur-sm"
                       }`}
                     >
-                      {!esMio && (
-                        <p className="mb-1 text-[10px] font-bold text-blue-400">{perfilEmisor?.username}</p>
+                      {esMio && (
+                        <div className="pointer-events-none absolute inset-0 rounded-2xl rounded-tr-none bg-linear-to-br from-blue-400/10 via-transparent to-cyan-400/5" />
                       )}
-                      <p className="text-sm leading-relaxed">{msg.content}</p>
-                      <p className={`mt-1 text-[9px] opacity-60 ${esMio ? "text-right" : "text-left"}`}>
+                      {!esMio && (
+                        <div className="pointer-events-none absolute inset-0 rounded-2xl rounded-tl-none bg-linear-to-br from-white/8 via-transparent to-white/3" />
+                      )}
+                      {!esMio && (
+                        <p className="mb-1 text-[10px] font-bold text-zinc-300">
+                          {perfilEmisor?.username}
+                        </p>
+                      )}
+                      <p className="relative text-sm leading-relaxed">
+                        {msg.content}
+                      </p>
+                      <p
+                        className={`relative mt-1 text-[9px] opacity-60 ${esMio ? "text-right text-blue-200/75" : "text-left"}`}
+                      >
                         {formatearHora(msg.created_at)}
                       </p>
                     </div>
@@ -194,8 +221,8 @@ export default function ChatPage() {
               <div ref={finMensajesRef} />
             </main>
 
-            <footer className="p-3 sm:p-4">
-              <div className="relative">
+            <footer className="relative z-10 p-3 animate-fade animate-delay-250 sm:p-4">
+              <div className="relative animate-fade animate-delay-300">
                 {cargandoIA && (
                   <div className="pointer-events-none absolute -top-14 left-1/2 z-10 -translate-x-1/2 rounded-xl border border-blue-500/40 bg-zinc-900/95 px-4 py-2 shadow-lg shadow-blue-900/30 backdrop-blur-sm">
                     <div className="flex items-center gap-2 text-xs font-medium text-blue-200">
@@ -205,9 +232,13 @@ export default function ChatPage() {
                           ? "Traduciendo mensaje"
                           : "Mejorando mensaje"}
                         <span className="ml-1 inline-flex">
-                          <span className="animate-pulse [animation-delay:0ms]">.</span>
-                          <span className="animate-pulse [animation-delay:160ms]">.</span>
-                          <span className="animate-pulse [animation-delay:320ms]">.</span>
+                          <span className="animate-pulse ">.</span>
+                          <span className="animate-pulse animate-delay-150">
+                            .
+                          </span>
+                          <span className="animate-pulse animate-delay-300">
+                            .
+                          </span>
                         </span>
                       </span>
                     </div>
@@ -216,13 +247,14 @@ export default function ChatPage() {
 
                 <form
                   onSubmit={enviarMensaje}
-                  className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-2 focus-within:border-zinc-600"
+                  className="group relative flex items-center gap-2 rounded-2xl border border-zinc-700/60 bg-zinc-900/70 px-3 py-2 shadow-lg shadow-black/20 backdrop-blur-md transition-all duration-200  focus-within:ring-1 focus-within:ring-blue-400/30 focus-within:shadow-blue-900/30"
                 >
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-linear-to-r from-blue-500/6 via-transparent to-cyan-400/6 opacity-70" />
                   <input
                     value={nuevoMensaje}
                     onChange={(e) => setNuevoMensaje(e.target.value)}
                     placeholder="Escribe un mensaje..."
-                    className="flex-1 bg-transparent p-2 text-sm outline-none"
+                    className="relative z-10 flex-1 bg-transparent px-2 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
                   />
 
                   {configIA.asistenteActivo && (
@@ -233,7 +265,7 @@ export default function ChatPage() {
                     />
                   )}
 
-                  <button className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200">
+                  <button className="relative z-10 flex cursor-pointer items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/30 transition-all hover:bg-blue-500">
                     Enviar
                     <LuSendHorizontal />
                   </button>
@@ -242,12 +274,30 @@ export default function ChatPage() {
             </footer>
           </>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900">
-              <LuUser size={40} className="text-zinc-700" />
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden p-6 animate-fade-up animate-delay-100 sm:p-8">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(59,130,246,0.2),transparent_52%)]" />
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 h-56 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(2,6,23,0.28),transparent_72%)]" />
+
+            <div className="relative w-full max-w-2xl text-center animate-fade-up animate-delay-150">
+              <div className="relative mx-auto mb-7 flex h-50 w-50 items-center justify-center rounded-4xl border border-blue-400/25 bg-zinc-900/30 p-5 backdrop-blur-sm animate-flip-up animate-delay-200">
+                <div className="pointer-events-none absolute inset-0 rounded-4xl bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.24),transparent_55%)]" />
+                <img
+                  src="/logo.svg"
+                  alt="Textly Chat"
+                  className="relative h-full w-full object-contain animate-bounce animate-infinite animate-duration-1500 animate-delay-250"
+                />
+              </div>
+
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.26em] text-blue-300/90 animate-fade-up animate-delay-300">
+                Textly Chat
+              </p>
+              <h2 className="text-balance text-3xl font-black leading-tight text-zinc-100 [text-shadow:0_2px_16px_rgba(2,6,23,0.55)] animate-fade-up animate-delay-350 sm:text-4xl">
+                Bienvenido, {usuario?.user_metadata?.full_name || "Crack"}
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-pretty text-sm font-light leading-relaxed text-zinc-200/75 [text-shadow:0_2px_10px_rgba(2,6,23,0.5)] animate-fade-up animate-delay-400 sm:text-base">
+                Busca a un amigo para comenzar a chatear al instante.
+              </p>
             </div>
-            <h2 className="text-xl font-bold">Bienvenido, {usuario?.user_metadata?.full_name || "Crack"}</h2>
-            <p className="mt-2 text-sm text-zinc-500">Busca a un amigo para comenzar a chatear.</p>
           </div>
         )}
       </section>

@@ -30,16 +30,16 @@ export default function AiAssistantMenu({
   }, []);
 
   return (
-    <div ref={contenedorRef} className="relative">
+    <div ref={contenedorRef} className="relative z-30">
       {abierto && (
-        <div className="absolute bottom-full right-0 z-20 mb-2 w-52 rounded-xl border border-zinc-700 bg-zinc-900 p-1 shadow-xl shadow-black/30">
+        <div className="absolute bottom-full right-0 z-50 mb-2 w-52 rounded-xl border border-zinc-700 bg-zinc-900 p-1 shadow-xl shadow-black/30 animate-fade animate-duration-300">
           <button
             type="button"
             onClick={async () => {
               await onImprove();
               setAbierto(false);
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 animate-fade animate-delay-100
             cursor-pointer"
           >
             <LuSparkles className="text-violet-400" />
@@ -51,7 +51,7 @@ export default function AiAssistantMenu({
               await onTranslate();
               setAbierto(false);
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 animate-fade animate-delay-150
             cursor-pointer"
           >
             <LuLanguages className="text-purple-400" />
@@ -65,7 +65,7 @@ export default function AiAssistantMenu({
         onClick={() => setAbierto((prev) => !prev)}
         disabled={disabled}
         aria-expanded={abierto}
-        className={`group relative flex items-center overflow-hidden rounded-full p-2 transition-all duration-300 ${
+        className={`group relative flex items-center overflow-hidden rounded-full p-2 transition-all duration-300 animate-fade animate-delay-350 ${
           abierto
             ? "bg-zinc-800 text-violet-400"
             : "text-zinc-400 hover:bg-zinc-800 hover:text-violet-400"

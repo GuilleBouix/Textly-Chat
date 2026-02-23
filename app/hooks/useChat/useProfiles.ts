@@ -1,21 +1,55 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { profilesService } from "../../services/profilesService";
 import type { PerfilChat } from "../../types/chat";
 import type { PerfilBusqueda } from "../../types/chat";
 import { normalizeAvatarUrl } from "../../lib/avatar";
+import { localCache } from "../../lib/localCache";
 
 // ============================================
 // HOOK DE PERFILES
 // ============================================
 
-export function useProfiles() {
+interface UseProfilesProps {
+  userId: string | undefined;
+}
+
+const CACHE_PERFILES_MS = 1000 * 60 * 60 * 24;
+
+const getPerfilesCacheKey = (userId: string) => `textly:profiles:${userId}`;
+
+export function useProfiles({ userId }: UseProfilesProps) {
   // ============================================
   // ESTADOS
   // ============================================
 
   // Cache de perfiles de usuarios
   const [perfiles, setPerfiles] = useState<Record<string, PerfilChat>>({});
+  const perfilesRef = useRef<Record<string, PerfilChat>>({});
+
+  useEffect(() => {
+    perfilesRef.current = perfiles;
+  }, [perfiles]);
+
+  useEffect(() => {
+    if (!userId) {
+      setPerfiles({});
+      return;
+    }
+
+    const cache = localCache.read<Record<string, PerfilChat>>(
+      getPerfilesCacheKey(userId),
+      CACHE_PERFILES_MS,
+    );
+    if (cache) {
+      setPerfiles(cache);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    localCache.write(getPerfilesCacheKey(userId), perfiles);
+  }, [userId, perfiles]);
 
   // ============================================
   // FUNCIONES
@@ -25,8 +59,13 @@ export function useProfiles() {
   const cargarPerfilesPublicos = useCallback(async (ids: string[]) => {
     if (!ids.length) return;
 
-    const perfilesPublicos = await profilesService.getPublicProfiles(ids);
-    const authMetadata = await profilesService.getAuthMetadata(ids);
+    const idsPendientes = Array.from(new Set(ids.filter(Boolean))).filter(
+      (id) => !perfilesRef.current[id],
+    );
+    if (!idsPendientes.length) return;
+
+    const perfilesPublicos = await profilesService.getPublicProfiles(idsPendientes);
+    const authMetadata = await profilesService.getAuthMetadata(idsPendientes);
     const perfilesEnriquecidos = await profilesService.enrichWithAuthMetadata(
       perfilesPublicos,
       authMetadata,

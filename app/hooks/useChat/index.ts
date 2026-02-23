@@ -36,7 +36,7 @@ export function useChat(): UseChatReturn {
     cargarPerfilesPublicos,
     buscarUsuarios,
     agregarPerfilUsuario,
-  } = useProfiles();
+  } = useProfiles({ userId: usuario?.id });
 
   // Hook de salas
   const {
