@@ -99,7 +99,7 @@ export default function Sidebar({
           <p className="truncate text-sm font-bold text-zinc-100">
             {nombrePropio}
           </p>
-          <p className="truncate text-[10px] text-emerald-500/80">En línea</p>
+          <p className="truncate text-[10px] text-emerald-500/80">En linea</p>
         </div>
 
         {/* Botones de accion */}
@@ -343,5 +343,3 @@ export default function Sidebar({
     </aside>
   );
 }
-
-

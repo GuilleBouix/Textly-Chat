@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LuCheck, LuSparkles, LuX } from "react-icons/lu";
 
 type ModoRedaccion = "formal" | "informal";
@@ -35,6 +35,12 @@ export default function Settings({
   );
   const [idioma, setIdioma] = useState<Idioma>(configIA.idioma);
   const [guardandoIA, setGuardandoIA] = useState(false);
+
+  useEffect(() => {
+    setAsistenteActivo(configIA.asistenteActivo);
+    setModoRedaccion(configIA.modoRedaccion);
+    setIdioma(configIA.idioma);
+  }, [configIA, abierto]);
 
   if (!abierto) return null;
 
@@ -140,7 +146,7 @@ export default function Settings({
                 onChange={(e) => setIdioma(e.target.value as Idioma)}
                 className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-sm text-white outline-none focus:border-blue-500"
               >
-                <option value="es">Español</option>
+                <option value="es">Espanol</option>
                 <option value="en">Ingles</option>
                 <option value="pt">Portugues</option>
               </select>

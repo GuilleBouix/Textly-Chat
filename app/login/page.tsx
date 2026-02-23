@@ -1,12 +1,30 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { supabase } from "../lib/supabaseClient";
+import { SkeletonLogin } from "../components/skeletons";
 
 // ============================================
 // COMPONENTE DE LOGIN
 // ============================================
 
 export default function LoginPage() {
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const verificarAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        window.location.href = "/";
+        return;
+      }
+      setCargando(false);
+    };
+    verificarAuth();
+  }, []);
   // ============================================
   // FUNCIONES
   // ============================================
@@ -17,12 +35,17 @@ export default function LoginPage() {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    if (error) console.error("Error al iniciar sesión:", error.message);
+    if (error) console.error("Error al iniciar sesion:", error.message);
   };
 
   // ============================================
   // RENDERIZADO
   // ============================================
+
+  if (cargando) {
+    return <SkeletonLogin />;
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
       {/* Fondo con efectos de gradiente */}

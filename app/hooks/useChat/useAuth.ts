@@ -15,6 +15,9 @@ export function useAuth() {
   // Usuario actualmente autenticado
   const [usuario, setUsuario] = useState<UsuarioSupabase | null>(null);
 
+  // Estado de carga
+  const [cargando, setCargando] = useState(true);
+
   // ============================================
   // EFECTOS
   // ============================================
@@ -24,6 +27,7 @@ export function useAuth() {
     const inicializar = async () => {
       const user = await authService.getCurrentUser();
       setUsuario(user);
+      setCargando(false);
     };
     inicializar();
   }, []);
@@ -55,6 +59,7 @@ export function useAuth() {
 
   return {
     usuario,
+    cargando,
     setUsuario,
     cerrarSesion,
     obtenerUsuarioActual,

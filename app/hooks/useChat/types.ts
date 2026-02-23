@@ -21,6 +21,7 @@ export interface ConfigIA {
 // Estado del usuario autenticado
 export interface UseAuthState {
   usuario: UsuarioSupabase | null;
+  cargando: boolean;
   refreshUsuario: () => Promise<void>;
 }
 

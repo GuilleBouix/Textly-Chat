@@ -9,6 +9,7 @@ import Modal from "./components/Modal";
 import Settings from "./components/Settings";
 import Sidebar from "./components/Sidebar";
 import UserSearch from "./components/UserSearch";
+import { SkeletonSidebar, SkeletonChat } from "./components/skeletons";
 import { useChat } from "./hooks/useChat";
 import { normalizeAvatarUrl } from "./lib/avatar";
 
@@ -25,6 +26,7 @@ const formatearHora = (fechaISO: string) => {
 export default function ChatPage() {
   const {
     usuario,
+    cargando,
     salas,
     idSalaActiva,
     setIdSalaActiva,
@@ -80,29 +82,35 @@ export default function ChatPage() {
         />
       )}
 
-      <Sidebar
-        usuario={usuario}
-        salas={salas}
-        idSalaActiva={idSalaActiva || ""}
-        perfiles={perfiles}
-        solicitudesPendientes={solicitudesPendientes}
-        solicitudesEnviadas={solicitudesEnviadas}
-        mensajesNoLeidos={mensajesNoLeidos}
-        alSeleccionarSala={(id) => {
-          setIdSalaActiva(id);
-          marcarChatComoLeido(id);
-          setSidebarMobileAbierto(false);
-        }}
-        alEliminarSala={setIdSalaAEliminar}
-        alAceptarSolicitud={aceptarSolicitud}
-        alCancelarSolicitud={cancelarSolicitud}
-        abrirModalBuscar={() => setMostrarModalBuscar(true)}
-        abrirSettings={() => setMostrarSettings(true)}
-        alCerrarSesion={cerrarSesion}
-      />
+      {cargando ? (
+        <SkeletonSidebar />
+      ) : (
+        <Sidebar
+          usuario={usuario}
+          salas={salas}
+          idSalaActiva={idSalaActiva || ""}
+          perfiles={perfiles}
+          solicitudesPendientes={solicitudesPendientes}
+          solicitudesEnviadas={solicitudesEnviadas}
+          mensajesNoLeidos={mensajesNoLeidos}
+          alSeleccionarSala={(id) => {
+            setIdSalaActiva(id);
+            marcarChatComoLeido(id);
+            setSidebarMobileAbierto(false);
+          }}
+          alEliminarSala={setIdSalaAEliminar}
+          alAceptarSolicitud={aceptarSolicitud}
+          alCancelarSolicitud={cancelarSolicitud}
+          abrirModalBuscar={() => setMostrarModalBuscar(true)}
+          abrirSettings={() => setMostrarSettings(true)}
+          alCerrarSesion={cerrarSesion}
+        />
+      )}
 
       <section className="relative flex min-w-0 flex-1 flex-col bg-zinc-950">
-        {idSalaActiva ? (
+        {cargando ? (
+          <SkeletonChat />
+        ) : idSalaActiva ? (
           <>
             <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950/50 p-3 backdrop-blur-md sm:p-4">
               <div className="flex items-center gap-3">
@@ -217,11 +225,13 @@ export default function ChatPage() {
                     className="flex-1 bg-transparent p-2 text-sm outline-none"
                   />
 
-                  <AiAssistantMenu
-                    onImprove={mejorarMensajeIA}
-                    onTranslate={traducirMensajeIA}
-                    disabled={cargandoIA}
-                  />
+                  {configIA.asistenteActivo && (
+                    <AiAssistantMenu
+                      onImprove={mejorarMensajeIA}
+                      onTranslate={traducirMensajeIA}
+                      disabled={cargandoIA}
+                    />
+                  )}
 
                   <button className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200">
                     Enviar

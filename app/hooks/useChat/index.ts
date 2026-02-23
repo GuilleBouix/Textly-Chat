@@ -28,7 +28,7 @@ export function useChat(): UseChatReturn {
   // ============================================
 
   // Hook de autenticacion
-  const { usuario, cerrarSesion, refreshUsuario } = useAuth();
+  const { usuario, cargando, cerrarSesion, refreshUsuario } = useAuth();
 
   // Hook de perfiles (se inicializa primero para compartir funciones)
   const {
@@ -191,6 +191,7 @@ export function useChat(): UseChatReturn {
 
   return {
     usuario,
+    cargando,
     salas,
     idSalaActiva,
     setIdSalaActiva,
