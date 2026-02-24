@@ -12,9 +12,6 @@ export default function EmptyState({ nombreUsuario }: EmptyStateProps) {
 
   return (
     <div className="relative flex flex-1 items-center justify-center overflow-hidden p-6 animate-fade-up animate-delay-100 sm:p-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(167,139,250,0.2),transparent_52%)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-56 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(2,6,23,0.28),transparent_72%)]" />
-
       <div className="relative w-full max-w-2xl text-center animate-fade-up animate-delay-150">
         <div className="relative mx-auto mb-7 flex h-50 w-50 items-center justify-center rounded-4xl border border-violet-400/25 bg-zinc-900/30 p-5 backdrop-blur-sm animate-flip-up animate-delay-200">
           <div className="pointer-events-none absolute inset-0 rounded-4xl bg-[radial-gradient(circle_at_30%_20%,rgba(168,85,247,0.24),transparent_55%)]" />

@@ -26,7 +26,7 @@ export default function MessageList({
   finRef,
 }: MessageListProps) {
   return (
-    <main className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+    <main className="custom-scrollbar relative z-10 flex-1 space-y-4 overflow-y-auto bg-transparent p-3 animate-fade animate-delay-150 sm:p-4">
       {mensajes.map((msg) => {
         const esMio = msg.sender_id === usuarioId;
         const perfil = perfiles[msg.sender_id];

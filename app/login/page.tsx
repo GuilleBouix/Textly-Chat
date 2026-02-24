@@ -16,30 +16,42 @@ export default function LoginPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_18%,rgba(168,85,247,0.22),transparent_40%),radial-gradient(circle_at_82%_14%,rgba(217,70,239,0.18),transparent_36%),radial-gradient(circle_at_50%_84%,rgba(126,34,206,0.18),transparent_44%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(130deg,rgba(88,28,135,0.08)_0%,rgba(17,24,39,0)_45%,rgba(76,29,149,0.08)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_18%,rgba(168,85,247,0.16),transparent_40%),radial-gradient(circle_at_82%_14%,rgba(217,70,239,0.12),transparent_36%),radial-gradient(circle_at_50%_84%,rgba(126,34,206,0.12),transparent_44%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(130deg,rgba(88,28,135,0.05)_0%,rgba(17,24,39,0)_45%,rgba(76,29,149,0.05)_100%)]" />
       </div>
 
-      <section className="relative mx-auto flex min-h-screen max-w-5xl items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md rounded-3xl border border-purple-500/30 bg-zinc-900/65 p-8 shadow-[0_24px_80px_rgba(76,29,149,0.28)] backdrop-blur-xl sm:p-10">
+      <section className="relative mx-auto flex min-h-screen max-w-5xl items-center justify-center px-6 py-12 animate-fade">
+        <div className="w-full max-w-md rounded-3xl border border-purple-500/30 bg-linear-to-br from-zinc-950 to-zinc-900 p-8 sm:p-10">
           <div className="mb-7 flex flex-col items-center text-center">
-            <div className="relative mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-400/35 bg-zinc-900/80 p-2">
-              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_30%_20%,rgba(168,85,247,0.25),transparent_58%)]" />
+            <div
+              className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-400/35 bg-zinc-900 p-2
+            animate-fade-up"
+            >
               <img
                 src="/logo.svg"
                 alt="Textly Chat"
-                className="relative h-full w-full object-contain"
+                className="h-full w-full object-contain
+                animate-fade-up animate-delay-100"
               />
             </div>
 
-            <span className="mb-3 inline-flex rounded-full border border-purple-400/35 bg-purple-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-purple-200">
+            <span
+              className="mb-3 inline-flex rounded-full border border-purple-400/35 bg-zinc-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-purple-200
+            animate-fade-up animate-delay-100"
+            >
               Textly Chat
             </span>
 
-            <h1 className="text-3xl font-black leading-tight text-zinc-100 sm:text-4xl">
-              Inicia sesion
+            <h1
+              className="text-3xl font-black leading-tight text-zinc-100 sm:text-4xl
+            animate-fade-up animate-delay-150"
+            >
+              Iniciar Sesión
             </h1>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-300 sm:text-base">
+            <p
+              className="mt-3 text-sm leading-relaxed text-zinc-300 sm:text-base
+            animate-fade-up animate-delay-150"
+            >
               Accede a tus chats en segundos con una experiencia rapida y
               segura.
             </p>
@@ -47,7 +59,8 @@ export default function LoginPage() {
 
           <button
             onClick={manejarLoginGoogle}
-            className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 px-5 py-3.5 text-sm font-bold text-white transition-all hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500 active:scale-[0.99]"
+            className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-violet-600 px-5 py-3.5 text-sm font-bold text-white transition-colors cursor-pointer hover:bg-violet-500 active:scale-[0.99]
+            animate-fade-up animate-delay-200"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -75,8 +88,11 @@ export default function LoginPage() {
             <span>Continuar con Google</span>
           </button>
 
-          <p className="mt-5 text-center text-xs text-zinc-400">
-            Al continuar aceptas nuestros terminos y politicas de privacidad.
+          <p
+            className="mt-5 text-center text-xs text-zinc-400
+          animate-fade-up animate-delay-250"
+          >
+            Desarrollado por Guille Bouix
           </p>
         </div>
       </section>

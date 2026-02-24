@@ -1,5 +1,6 @@
 // Exportaciones de componentes de chat
 export { default as ChatHeader } from "./ChatHeader";
+export { default as ChatAIFunctions } from "./ChatAIFunctions";
 export { default as MessageBubble } from "./MessageBubble";
 export { default as MessageList } from "./MessageList";
 export { default as MessageInput } from "./MessageInput";

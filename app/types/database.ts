@@ -5,6 +5,18 @@ export interface Perfil {
   created_at: string;
 }
 
+export type WritingMode = "formal" | "informal";
+export type TranslationLanguage = "es" | "en" | "pt" | "it" | "de";
+
+export interface UserSettings {
+  user_id: string;
+  assistant_enabled: boolean;
+  writing_mode: WritingMode;
+  translation_language: TranslationLanguage;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Sala {
   id: string;
   room_name: string | null;

@@ -24,34 +24,35 @@ export default function MessageBubble({
   perfil,
 }: MessageBubbleProps) {
   return (
-    <div className={`flex items-start gap-2 ${esMio ? "justify-end" : "justify-start"}`}>
-      {/* Avatar del remitente (si no es mío) */}
-      {!esMio && <UserAvatar src={perfil?.avatarUrl} nombre={perfil?.nombre} size="md" />}
+    <div
+      className={`flex items-start gap-2 animate-fade animate-delay-200 ${
+        esMio ? "justify-end" : "justify-start"
+      }`}
+    >
+      {!esMio && (
+        <UserAvatar src={perfil?.avatarUrl} nombre={perfil?.nombre} size="md" />
+      )}
 
-      {/* Burbuja de mensaje */}
       <div
-        className={`relative max-w-[75%] p-3 rounded-2xl shadow-lg ${
+        className={`relative max-w-[85%] rounded-2xl border p-3 text-zinc-100 ${
           esMio
-            ? "bg-blue-600 text-white rounded-tr-sm"
-            : "bg-zinc-800 text-zinc-200 rounded-tl-sm border border-zinc-700"
+            ? "rounded-tr-md border-violet-500 bg-zinc-900"
+            : "rounded-tl-md border-zinc-700 bg-zinc-900"
         }`}
       >
-        {/* Triángulo indicador */}
-        <span
-          className={`absolute top-2 h-2.5 w-2.5 rotate-45 ${
-            esMio
-              ? "-right-1.5 bg-blue-600"
-              : "-left-1.5 border-l border-t border-zinc-700 bg-zinc-800"
-          }`}
-        />
         <p className="text-sm leading-relaxed">{mensaje.content}</p>
-        <p className={`mt-1 text-[10px] ${esMio ? "text-blue-100/80" : "text-zinc-400"}`}>
+        <p
+          className={`mt-1 text-[10px] opacity-70 ${
+            esMio ? "text-right text-violet-200" : "text-left text-zinc-300"
+          }`}
+        >
           {formatearHora(mensaje.created_at)}
         </p>
       </div>
 
-      {/* Avatar propio */}
-      {esMio && <UserAvatar src={perfil?.avatarUrl} nombre={perfil?.nombre} size="md" />}
+      {esMio && (
+        <UserAvatar src={perfil?.avatarUrl} nombre={perfil?.nombre} size="md" />
+      )}
     </div>
   );
 }
