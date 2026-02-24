@@ -12,26 +12,54 @@ Este documento describe la logica, la arquitectura de datos y el flujo de trabaj
 
 ## 2. Arquitectura de datos (Supabase)
 
-Se usan dos tablas principales con **RLS (Row Level Security)** activado para garantizar que cada usuario solo acceda a sus datos.
+Se usan tres tablas principales con **RLS (Row Level Security)** activado para garantizar que cada usuario solo acceda a sus datos.
+
+### `profiles` (perfiles de usuario)
+
+- `id`: UUID (FK a auth.users, PK)
+- `email`: email del usuario (UNIQUE NOT NULL)
+- `username`: nombre de usuario
+- `created_at`: fecha de creacion
 
 ### `rooms` (salas de chat)
 
-- `id`: identificador unico (`UUID`)
+- `id`: UUID unico
+- `room_name`: nombre de la sala (opcional)
+- `participant_1`: UUID del primer participante (FK a profiles)
+- `participant_2`: UUID del segundo participante (FK a profiles)
 - `created_at`: fecha de creacion
-- `participant_1`: ID del primer usuario
-- `participant_2`: ID del segundo usuario
 
-**Politica de seguridad:** solo los participantes de la sala pueden leer su fila.
+**Restricciones:**
+- UNIQUE(participant_1, participant_2)
+- CHECK (participant_1 != participant_2)
 
 ### `messages` (mensajes)
 
-- `id`: identificador unico
+- `id`: UUID unico
 - `room_id`: clave foranea hacia la sala
-- `sender_id`: ID del usuario que envia
+- `sender_id`: ID del usuario que envia (FK a profiles)
 - `content`: texto del mensaje
 - `created_at`: timestamp con zona horaria
 
-**Politica de seguridad:** un usuario solo puede insertar mensajes con su propio `sender_id`.
+### Funciones y Triggers
+
+- **handle_new_user()**: Funcion que crea automaticamente un perfil al registrarse el usuario en auth.users
+- **Trigger on_auth_user_created**: Ejecuta handle_new_user() despues de cada INSERT en auth.users
+
+### Politicas de seguridad (RLS)
+
+**profiles:**
+- SELECT: cualquier usuario autenticado puede ver perfiles
+- UPDATE: solo puedes actualizar tu propio perfil
+
+**rooms:**
+- SELECT: solo participantes de la sala pueden ver
+- INSERT: cualquier usuario autenticado puede crear
+- DELETE: solo participantes pueden borrar
+
+**messages:**
+- SELECT: solo participantes de la sala pueden leer
+- INSERT: solo puedes enviar con tu propio sender_id
 
 ## 3. Funciones principales y flujos logicos
 

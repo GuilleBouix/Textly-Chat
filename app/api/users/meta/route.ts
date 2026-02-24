@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     });
 
     const results = await Promise.all(
-      ids.map(async (id) => {
+      ids.map(async (id: string) => {
         const { data } = await admin.auth.admin.getUserById(id);
         const authUser = data?.user;
 
