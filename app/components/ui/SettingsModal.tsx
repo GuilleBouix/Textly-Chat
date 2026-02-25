@@ -56,6 +56,7 @@ export default function SettingsModal({
       <div className="flex h-auto w-full max-w-md flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl animate-fade-up">
         <div className="flex items-center justify-between border-b border-zinc-800 p-4">
           <h2 className="text-lg font-bold text-white">Asistente de IA</h2>
+
           <button
             onClick={alCerrar}
             className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
@@ -82,15 +83,18 @@ export default function SettingsModal({
                     }`}
                   />
                 </div>
+
                 <div>
                   <p className="text-sm font-medium text-white">
                     Asistente de IA
                   </p>
+
                   <p className="text-xs text-zinc-500">
                     Mejora tus mensajes automaticamente.
                   </p>
                 </div>
               </div>
+
               <button
                 onClick={() => setAsistenteActivo(!asistenteActivo)}
                 className={`relative h-6 w-11 rounded-full cursor-pointer transition-colors ${
@@ -107,8 +111,9 @@ export default function SettingsModal({
 
             <div>
               <label className="mb-2 block text-xs font-medium text-zinc-400">
-                Modo de Redaccion
+                Modo de Redacción
               </label>
+
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setModoRedaccion("formal")}
@@ -120,6 +125,7 @@ export default function SettingsModal({
                 >
                   Formal
                 </button>
+
                 <button
                   onClick={() => setModoRedaccion("informal")}
                   className={`cursor-pointer rounded-xl border p-3 text-sm font-medium transition-colors ${
@@ -134,9 +140,10 @@ export default function SettingsModal({
             </div>
 
             <div>
-              <label className="mb-2.5 block text-sm font-medium text-zinc-200">
-                Idioma de Traduccion
+              <label className="mb-2 block text-xs font-medium text-zinc-400">
+                Idioma de Traducción
               </label>
+
               <select
                 value={idioma}
                 onChange={(e) =>
@@ -144,9 +151,9 @@ export default function SettingsModal({
                 }
                 className="block w-full cursor-pointer rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 shadow-xs outline-none transition-colors focus:border-violet-500"
               >
-                <option value="es">Espanol</option>
+                <option value="es">Español</option>
                 <option value="en">Ingles</option>
-                <option value="pt">Portugues</option>
+                <option value="pt">Portugués</option>
                 <option value="it">Italiano</option>
                 <option value="de">Aleman</option>
               </select>
@@ -161,10 +168,11 @@ export default function SettingsModal({
           >
             Cancelar
           </button>
+
           <button
             onClick={handleGuardarIA}
             disabled={guardando}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2 text-sm font-bold text-white transition-colors cursor-pointer hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {guardando ? "Guardando..." : "Guardar"}
           </button>
