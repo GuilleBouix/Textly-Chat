@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { pickAvatarFromMetadata } from "../../../lib/avatar";
 
 type BasicUser = {
   id: string;
@@ -43,9 +44,9 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const idsRaw = Array.isArray(body?.ids) ? body.ids : [];
-    const ids = idsRaw
-      .filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
-      .slice(0, 20);
+    const ids = [...new Set(
+      idsRaw.filter((id: unknown): id is string => typeof id === "string" && id.length > 0),
+    )].slice(0, 200);
 
     if (!ids.length) {
       return NextResponse.json({ users: [] });
@@ -73,18 +74,16 @@ export async function POST(req: Request) {
             (authUser.user_metadata?.name as string) ||
             authUser.email?.split("@")[0] ||
             "Usuario",
-          avatarUrl:
-            (authUser.user_metadata?.avatar_url as string) ||
-            (authUser.user_metadata?.picture as string) ||
-            null,
+          avatarUrl: pickAvatarFromMetadata(authUser.user_metadata as Record<string, unknown>),
         } satisfies BasicUser;
       }),
     );
 
     return NextResponse.json({ users: results.filter(Boolean) });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const details = error instanceof Error ? error.message : "Error inesperado";
     return NextResponse.json(
-      { error: "No se pudo obtener metadata de usuarios", details: error?.message },
+      { error: "No se pudo obtener metadata de usuarios", details },
       { status: 500 },
     );
   }

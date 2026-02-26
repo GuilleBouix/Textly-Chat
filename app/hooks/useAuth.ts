@@ -1,6 +1,7 @@
 // ----------- IMPORTS -----------
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { pickAvatarFromMetadata } from "../lib/avatar";
 
 // ----------- TIPOS -----------
 export type UsuarioPerfil = {
@@ -104,11 +105,7 @@ export const useAuth = () => {
         user.email?.split("@")[0];
 
       const avatarUsuario =
-        (user.user_metadata?.avatar_url as string) ||
-        (user.user_metadata?.avatar as string) ||
-        (user.user_metadata?.imagen as string) ||
-        (user.user_metadata?.picture as string) ||
-        null;
+        pickAvatarFromMetadata(user.user_metadata as Record<string, unknown>);
 
       setUsuario({
         id: user.id,

@@ -67,7 +67,9 @@ export const useChat = () => {
   const [cargando, setCargando] = useState(true);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [cargandoIA, setCargandoIA] = useState(false);
-  const [accionIAEnCurso, setAccionIAEnCurso] = useState<ImproveAction | null>(null);
+  const [accionIAEnCurso, setAccionIAEnCurso] = useState<ImproveAction | null>(
+    null,
+  );
   const [cargandoConfigIA, setCargandoConfigIA] = useState(true);
   const [guardandoConfigIA, setGuardandoConfigIA] = useState(false);
   const [configIA, setConfigIA] = useState<UserSettings | null>(null);
@@ -86,17 +88,19 @@ export const useChat = () => {
     cargarPerfiles,
     validarSalaActiva,
   } = useRooms(usuario?.id);
-  const { mensajes, enviarMensaje, setMensajes, limpiarCacheSala } = useMensajes(
-    idSalaActiva,
-    usuario?.id,
-    validarSalaActiva,
-    (error) => {
-      setMensajes([]);
-      alert(error + " La pagina se actualizara.");
-      window.location.reload();
-    },
-    cargarPerfiles,
-  );
+
+  const { mensajes, enviarMensaje, setMensajes, limpiarCacheSala } =
+    useMensajes(
+      idSalaActiva,
+      usuario?.id,
+      validarSalaActiva,
+      (error) => {
+        setMensajes([]);
+        alert(error + " La pagina se actualizara.");
+        window.location.reload();
+      },
+      cargarPerfiles,
+    );
 
   // ----------- FUNCIONES -----------
   const cargarConfigIA = useCallback(async (): Promise<void> => {
@@ -178,7 +182,9 @@ export const useChat = () => {
     setNuevoMensaje("");
   };
 
-  const ejecutarTransformacionIA = async (action: ImproveAction): Promise<void> => {
+  const ejecutarTransformacionIA = async (
+    action: ImproveAction,
+  ): Promise<void> => {
     if (!nuevoMensaje.trim() || !idSalaActiva) return;
     if (!configIA?.assistant_enabled) return;
 
@@ -262,8 +268,10 @@ export const useChat = () => {
     accionIAEnCurso,
     mejorarMensajeIA,
     traducirMensajeIA,
-    configIA: configIA || (usuario?.id ? buildDefaultUserSettings(usuario.id) : null),
-    asistenteIAActivo: configIA?.assistant_enabled ?? DEFAULT_CONFIG_IA.assistant_enabled,
+    configIA:
+      configIA || (usuario?.id ? buildDefaultUserSettings(usuario.id) : null),
+    asistenteIAActivo:
+      configIA?.assistant_enabled ?? DEFAULT_CONFIG_IA.assistant_enabled,
     cargandoConfigIA,
     guardandoConfigIA,
     actualizarConfigIA,

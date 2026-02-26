@@ -9,6 +9,7 @@ import {
   WritingMode,
 } from "../../types/database";
 import SettingsModal from "../ui/SettingsModal";
+import UserAvatar from "../ui/UserAvatar";
 import RoomItem from "./RoomItem";
 
 // ----------- TIPOS -----------
@@ -56,13 +57,13 @@ export default function Sidebar({
     <>
       <aside className="relative z-10 flex h-full w-80 flex-col border-r border-zinc-800 bg-zinc-950/70">
         <div className="flex h-18 items-center gap-3 border-b border-zinc-800 px-6 animate-fade">
-          <img
-            src={usuario?.avatarUrl || "/default-avatar.png"}
-            onError={(e) => {
-              e.currentTarget.src = "/default-avatar.png";
-            }}
+          <UserAvatar
+            src={usuario?.avatarUrl}
+            nombre={usuario?.nombre || usuario?.username}
+            email={usuario?.email}
             alt="Avatar del usuario"
-            className="h-10 w-10 shrink-0 rounded-full object-cover border border-zinc-800"
+            size="lg"
+            className="border-zinc-800"
           />
 
           <div className="min-w-0 flex-1 overflow-hidden">

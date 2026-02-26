@@ -1,4 +1,5 @@
 // ----------- UTILIDADES DE FORMATEO Y HELPERS -----------
+import { pickAvatarFromMetadata } from "./avatar";
 
 // Formatea una fecha ISO a hora local española (HH:mm)
 export const formatearHora = (fechaISO: string): string => {
@@ -43,9 +44,6 @@ export const crearPerfilDesdeAuth = (usuario: {
       (usuario.user_metadata?.name as string) ||
       usuario.email?.split("@")[0] ||
       "Usuario",
-    avatarUrl:
-      (usuario.user_metadata?.avatar_url as string) ||
-      (usuario.user_metadata?.picture as string) ||
-      null,
+    avatarUrl: pickAvatarFromMetadata(usuario.user_metadata),
   };
 };

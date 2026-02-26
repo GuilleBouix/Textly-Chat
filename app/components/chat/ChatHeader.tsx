@@ -1,5 +1,5 @@
 // ----------- IMPORTS -----------
-// (sin imports adicionales)
+import UserAvatar from "../ui/UserAvatar";
 
 // ----------- TIPOS -----------
 interface ChatHeaderProps {
@@ -24,13 +24,13 @@ export default function ChatHeader({
         className="flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5
       animate-fade"
       >
-        <img
-          src={participante2?.avatarUrl || "/default-avatar.png"}
-          onError={(e) => {
-            e.currentTarget.src = "/default-avatar.png";
-          }}
+        <UserAvatar
+          src={participante2?.avatarUrl}
+          nombre={participante2?.nombre}
+          email={participante2?.email}
           alt="Participante 2"
-          className="h-8 w-8 rounded-full object-cover border border-zinc-800"
+          size="md"
+          className="border-zinc-800"
         />
         <p className="max-w-32 truncate text-xs font-medium text-zinc-200">
           {participante2?.nombre || participante2?.email || "Sin participante"}

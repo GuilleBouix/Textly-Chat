@@ -1,5 +1,8 @@
+"use client";
 // ----------- IMPORTS -----------
-// (sin imports adicionales)
+import Image from "next/image";
+import { useState } from "react";
+import { DEFAULT_AVATAR_SRC, normalizeAvatarUrl } from "../../lib/avatar";
 
 // ----------- TIPOS -----------
 interface UserAvatarProps {
@@ -24,6 +27,36 @@ const sizeClasses = {
   lg: "h-10 w-10 text-sm",
 };
 
+interface AvatarImageProps {
+  initialSrc: string | null;
+  alt: string;
+}
+
+const AvatarImage = ({ initialSrc, alt }: AvatarImageProps) => {
+  const [srcActual, setSrcActual] = useState<string>(initialSrc || DEFAULT_AVATAR_SRC);
+  const [ocultarImagen, setOcultarImagen] = useState(false);
+
+  if (ocultarImagen) return null;
+
+  return (
+    <Image
+      fill
+      unoptimized
+      sizes="40px"
+      src={srcActual}
+      alt={alt}
+      onError={() => {
+        if (srcActual !== DEFAULT_AVATAR_SRC) {
+          setSrcActual(DEFAULT_AVATAR_SRC);
+          return;
+        }
+        setOcultarImagen(true);
+      }}
+      className="relative z-10 object-cover"
+    />
+  );
+};
+
 // ----------- COMPONENTE -----------
 export default function UserAvatar({
   src,
@@ -35,22 +68,16 @@ export default function UserAvatar({
 }: UserAvatarProps) {
   const inicial = obtenerInicial(nombre, email);
   const sizeClass = sizeClasses[size];
-
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={alt}
-        className={`${sizeClass} shrink-0 overflow-hidden rounded-full border border-zinc-700 object-cover ${className}`}
-      />
-    );
-  }
+  const normalizedSrc = normalizeAvatarUrl(src);
 
   return (
     <div
-      className={`${sizeClass} flex shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800 font-bold text-zinc-200 ${className}`}
+      className={`${sizeClass} relative shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-800 ${className}`}
     >
-      {inicial}
+      <span className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center font-bold text-zinc-200">
+        {inicial}
+      </span>
+      <AvatarImage key={normalizedSrc || "default"} initialSrc={normalizedSrc} alt={alt} />
     </div>
   );
 }
