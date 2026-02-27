@@ -10,14 +10,6 @@ import { useAuth } from "./useAuth";
 import { useMensajes } from "./useMensajes";
 import { useRooms } from "./useRooms";
 
-// ----------- TIPOS -----------
-export type PerfilChat = {
-  id: string;
-  email?: string;
-  nombre: string;
-  avatarUrl: string | null;
-};
-
 type UpdateUserSettingsInput = {
   assistant_enabled?: boolean;
   writing_mode?: WritingMode;

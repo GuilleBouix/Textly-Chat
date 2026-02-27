@@ -58,6 +58,7 @@ export default function SettingsModal({
           <h2 className="text-lg font-bold text-white">Asistente de IA</h2>
 
           <button
+            type="button"
             onClick={alCerrar}
             className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
           >
@@ -85,9 +86,7 @@ export default function SettingsModal({
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-white">
-                    Asistente de IA
-                  </p>
+                  <p className="text-sm font-medium text-white">Asistente de IA</p>
 
                   <p className="text-xs text-zinc-500">
                     Mejora tus mensajes automaticamente.
@@ -96,6 +95,7 @@ export default function SettingsModal({
               </div>
 
               <button
+                type="button"
                 onClick={() => setAsistenteActivo(!asistenteActivo)}
                 className={`relative h-6 w-11 rounded-full cursor-pointer transition-colors ${
                   asistenteActivo ? "bg-violet-500" : "bg-zinc-700"
@@ -110,12 +110,13 @@ export default function SettingsModal({
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-medium text-zinc-400">
-                Modo de Redacción
-              </label>
+              <p className="mb-2 block text-xs font-medium text-zinc-400">
+                Modo de Redaccion
+              </p>
 
               <div className="grid grid-cols-2 gap-2">
                 <button
+                  type="button"
                   onClick={() => setModoRedaccion("formal")}
                   className={`cursor-pointer rounded-xl border p-3 text-sm font-medium transition-colors ${
                     modoRedaccion === "formal"
@@ -127,6 +128,7 @@ export default function SettingsModal({
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setModoRedaccion("informal")}
                   className={`cursor-pointer rounded-xl border p-3 text-sm font-medium transition-colors ${
                     modoRedaccion === "informal"
@@ -140,20 +142,24 @@ export default function SettingsModal({
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-medium text-zinc-400">
-                Idioma de Traducción
+              <label
+                htmlFor="idioma-traduccion"
+                className="mb-2 block text-xs font-medium text-zinc-400"
+              >
+                Idioma de Traduccion
               </label>
 
               <select
+                id="idioma-traduccion"
                 value={idioma}
                 onChange={(e) =>
                   setIdioma(e.target.value as TranslationLanguage)
                 }
                 className="block w-full cursor-pointer rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 shadow-xs outline-none transition-colors focus:border-violet-500"
               >
-                <option value="es">Español</option>
+                <option value="es">Espanol</option>
                 <option value="en">Ingles</option>
-                <option value="pt">Portugués</option>
+                <option value="pt">Portugues</option>
                 <option value="it">Italiano</option>
                 <option value="de">Aleman</option>
               </select>
@@ -163,6 +169,7 @@ export default function SettingsModal({
 
         <div className="flex gap-3 border-t border-zinc-800 p-4">
           <button
+            type="button"
             onClick={alCerrar}
             className="flex-1 cursor-pointer rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
           >
@@ -170,6 +177,7 @@ export default function SettingsModal({
           </button>
 
           <button
+            type="button"
             onClick={handleGuardarIA}
             disabled={guardando}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2 text-sm font-bold text-white transition-colors cursor-pointer hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"

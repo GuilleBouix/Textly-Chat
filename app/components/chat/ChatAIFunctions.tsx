@@ -43,10 +43,7 @@ export default function ChatAIFunctions({
   return (
     <div ref={asistenteIARef} className="relative">
       {menuIAAbierto ? (
-        <div
-          className="absolute bottom-15 right-0 z-[999] w-64 rounded-2xl rounded-br-md border border-purple-500 bg-zinc-900 p-2"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="absolute bottom-15 right-0 z-[999] w-64 rounded-2xl rounded-br-md border border-purple-500 bg-zinc-900 p-2">
           <button
             type="button"
             onClick={() => {

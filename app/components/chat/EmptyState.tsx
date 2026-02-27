@@ -1,5 +1,5 @@
 // ----------- IMPORTS -----------
-// (sin imports adicionales)
+import Image from "next/image";
 
 // ----------- TIPOS -----------
 interface EmptyStateProps {
@@ -15,10 +15,13 @@ export default function EmptyState({ nombreUsuario }: EmptyStateProps) {
       <div className="relative w-full max-w-2xl text-center animate-fade-up animate-delay-150">
         <div className="relative mx-auto mb-7 flex h-50 w-50 items-center justify-center rounded-4xl border border-violet-400/25 bg-zinc-900/30 p-5 backdrop-blur-sm animate-flip-up animate-delay-200">
           <div className="pointer-events-none absolute inset-0 rounded-4xl bg-[radial-gradient(circle_at_30%_20%,rgba(168,85,247,0.24),transparent_55%)]" />
-          <img
+          <Image
             src="/logo.svg"
             alt="Textly Chat"
+            width={200}
+            height={200}
             className="relative h-full w-full object-contain animate-bounce animate-infinite animate-duration-1500 animate-delay-250"
+            priority
           />
         </div>
 

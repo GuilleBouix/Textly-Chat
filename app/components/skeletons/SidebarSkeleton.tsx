@@ -1,5 +1,7 @@
 // ----------- SIDEBAR SKELETON -----------
 export default function SidebarSkeleton() {
+  const tarjetasSkeleton = ["sala-1", "sala-2", "sala-3"];
+
   return (
     <aside className="flex h-full w-80 flex-col border-r border-zinc-800 bg-zinc-900">
       {/* Profile section */}
@@ -21,9 +23,9 @@ export default function SidebarSkeleton() {
       <div className="flex-1 overflow-y-auto p-4">
         <div className="mb-4 h-4 w-20 animate-pulse rounded-lg bg-zinc-800" />
         <div className="space-y-2.5">
-          {[1, 2, 3].map((i) => (
+          {tarjetasSkeleton.map((id) => (
             <div
-              key={i}
+              key={id}
               className="animate-pulse rounded-2xl border border-zinc-900 bg-zinc-950 p-3.5"
             >
               <div className="mb-3 flex items-center justify-between">

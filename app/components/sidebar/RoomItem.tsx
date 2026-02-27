@@ -53,6 +53,14 @@ export default function RoomItem({
   return (
     <div
       onClick={() => onSelect(sala.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(sala.id);
+        }
+      }}
+      role="button"
+      tabIndex={0}
       className={`group relative cursor-pointer rounded-2xl border p-3 pr-12 transition-colors animate-fade-right ${
         isActiva
           ? "border-fuchsia-900 bg-linear-to-br from-zinc-950 to-zinc-900"
@@ -109,6 +117,7 @@ export default function RoomItem({
       </div>
 
       <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           onDelete(sala.id);

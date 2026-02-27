@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { supabase } from "../lib/supabaseClient";
 
 export default function LoginPage() {
@@ -27,11 +28,14 @@ export default function LoginPage() {
               className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-400/35 bg-zinc-900 p-2
             animate-fade-up"
             >
-              <img
+              <Image
                 src="/logo.svg"
                 alt="Textly Chat"
+                width={64}
+                height={64}
                 className="h-full w-full object-contain
                 animate-fade-up animate-delay-100"
+                priority
               />
             </div>
 
