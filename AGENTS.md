@@ -1,10 +1,11 @@
 # AGENTS.md - Textly Chat Development Guide
 
 ## Project Overview
-- **Stack**: Next.js 16, React 19, TypeScript, Tailwind CSS v4
-- **Backend**: Supabase (auth, database, realtime)
-- **AI**: Google Gemini API for message improvement
-- **Package Manager**: pnpm (see pnpm-lock.yaml)
+- **Stack**: Next.js 16.1.6, React 19.2.3, TypeScript, Tailwind CSS v4
+- **Backend**: Supabase (Auth, Postgres, Realtime)
+- **AI**: Google Gemini via `app/api/improve/route.ts`
+- **Security (App Layer)**: Zod, Upstash Redis, Upstash Ratelimit
+- **Package Manager**: pnpm
 
 ---
 
@@ -23,10 +24,11 @@ pnpm lint         # Run ESLint on entire project
 pnpm lint <path>  # Lint specific file/directory
 ```
 
-**Running a single test**: No test framework is currently configured. To add tests:
-```bash
-pnpm add -D vitest @testing-library/react @testing-library/jest-dom jsdom
-```
+**Tests**: No test framework is currently configured.
+
+Recommended smoke checks before merge:
+- `pnpm lint`
+- `pnpm build`
 
 ---
 
@@ -38,84 +40,100 @@ pnpm add -D vitest @testing-library/react @testing-library/jest-dom jsdom
 - TypeScript strict mode is enabled
 
 ### Imports
-- Use path aliases from `tsconfig.json` (none configured currently)
-- Relative imports for local modules: `../lib/supabaseClient`
-- Third-party imports first, then local:
-```typescript
-import { useState } from "react";
-import { supabase } from "../lib/supabaseClient";
-import { Mensaje, Sala } from "../types/database";
-```
+- Third-party imports first, then local imports
+- Use relative imports for local modules (no tsconfig path alias configured)
 
 ### Formatting
 - 2-space indentation
-- Use Prettier defaults (single quotes, trailing commas)
-- Tailwind CSS classes for all styling (see Tailwind v4 syntax)
+- Prettier defaults
+- Tailwind utility classes for styling
 
 ### Naming Conventions
 - **Components**: PascalCase (`Sidebar.tsx`, `Modal.tsx`)
 - **Hooks**: camelCase with `use` prefix (`useChat.ts`)
-- **Types/Interfaces**: PascalCase (`UsuarioSupabase`, `Sala`)
+- **Types/Interfaces**: PascalCase (`UserSettings`, `Sala`)
 - **Variables/Functions**: camelCase
 - **Files**: kebab-case for utilities, PascalCase for components
 
 ### TypeScript
-- Always type function parameters and return values
-- Use explicit types for interfaces matching Supabase schema
-- Use `any` sparingly; prefer `unknown` when type is uncertain
+- Type all function parameters and return values
+- Prefer explicit types for Supabase data contracts
+- Avoid `any`; use `unknown` when uncertain
 
-### React Patterns
-- Use `"use client"` directive for client components (see `app/components/Sidebar.tsx`)
-- Prefer function components with hooks over class components
-- Use `ref` for mutable values that don't trigger re-renders
-- Handle loading/error states explicitly
+### API Route Handling (Security)
+- Validate payloads with Zod using `safeParse`
+- Return neutral error messages (do not leak internal details)
+- Use structured security logs for sensitive route events
+- Apply rate limiting to sensitive endpoints:
+  - `/api/improve`
+  - `/api/users/meta`
 
-### Error Handling
-- API routes: Return `NextResponse.json({ error: "..." }, { status: ... })`
-- Client-side: Use try/catch with user-friendly error messages
-- Supabase errors: Check `error` object from destructured responses
-- Log errors to console with context: `console.error("ACTION:", { detail: error })`
-
-### Next.js App Router
-- Route handlers in `app/api/[route]/route.ts`
-- Server components by default, `"use client"` for interactivity
-- Use Next.js middleware (`middleware.ts`) for auth redirects
+### Next.js Security Patterns
+- Global security headers configured in `next.config.ts`:
+  - CSP
+  - `X-Frame-Options`
+  - `X-Content-Type-Options`
+  - `Referrer-Policy`
+  - `Permissions-Policy`
+  - HSTS in production
+- Route protection via `middleware.ts` with public exceptions:
+  - `/login`
+  - `/auth/callback`
 
 ### Supabase Patterns
-- Use `@supabase/ssr` for server-side client
-- Use `@supabase/supabase-js` for client-side
-- Always handle potential `null` from queries (`.maybeSingle()`, `.or()`)
-- Subscribe to realtime channels with proper cleanup in `useEffect` return
+- `@supabase/ssr` for server/client SSR-aware auth clients
+- `@supabase/supabase-js` for admin/service role access where needed
+- Handle nullable queries explicitly (`maybeSingle`)
+- Cleanup realtime channels in `useEffect` return
 
 ---
 
 ## Project Structure
 
-```
+```text
 app/
-├── api/                  # Next.js API routes
-│   ├── improve/         # AI message improvement
-│   └── users/meta/      # User profile fetching
-├── auth/callback/        # OAuth callback handler
-├── components/          # React components (Sidebar, Modal)
-├── hooks/               # Custom hooks (useChat)
-├── lib/                 # Utilities (supabaseClient)
-├── types/               # TypeScript interfaces (database.ts)
-├── layout.tsx           # Root layout
-├── login/page.tsx       # Login page
-└── page.tsx             # Main chat page
+  api/
+    improve/route.ts         # AI improve/translate endpoint
+    users/meta/route.ts      # User metadata endpoint (room-scoped authorization)
+  auth/callback/route.ts     # OAuth callback
+  components/                # UI components
+  hooks/                     # useAuth, useChat, useMensajes, useRooms
+  lib/
+    avatar.ts
+    supabaseClient.ts
+    utils.ts
+    security/
+      schemas.ts             # Zod schemas for route payloads
+      request.ts             # Request context (ip hash, request id)
+      rate-limit.ts          # Upstash rate limiter wrapper
+      logger.ts              # Structured security event logging
+  types/database.ts          # TypeScript DB contracts
+  layout.tsx
+  login/page.tsx
+  page.tsx
 
-middleware.ts            # Auth protection middleware
+middleware.ts                # Route protection / auth redirects
+next.config.ts               # Security headers + image config
 ```
 
 ---
 
 ## Environment Variables
-Required in `.env.local`:
+
+Required:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 - `GEMINI_API_KEY`
-- `GEMINI_MODEL` (optional, defaults to `gemini-2.5-flash`)
+
+Security / Rate limiting:
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+Optional:
+- `GEMINI_MODEL` (default `gemini-2.5-flash`)
+- `RATE_LIMIT_IMPROVE_MAX` (default `20`)
+- `RATE_LIMIT_META_MAX` (default `60`)
 
 ---
 
@@ -124,103 +142,86 @@ Required in `.env.local`:
 ### Tables
 
 #### `profiles`
-| Column     | Type      | Description                    |
-|------------|-----------|--------------------------------|
-| id         | uuid      | FK to auth.users (PK)         |
-| email      | text      | User email (UNIQUE NOT NULL)  |
-| username   | text      | Username                      |
-| created_at | timestamptz | Creation timestamp          |
+| Column     | Type                     |
+|------------|--------------------------|
+| id         | uuid                     |
+| username   | text                     |
+| email      | text                     |
+| created_at | timestamp with time zone |
 
 #### `rooms`
-| Column         | Type      | Description                          |
-|----------------|-----------|--------------------------------------|
-| id             | uuid      | Primary key (gen_random_uuid)        |
-| room_name      | text      | Optional room name                   |
-| participant_1  | uuid      | FK to profiles (first participant)   |
-| participant_2  | uuid      | FK to profiles (second participant)  |
-| created_at     | timestamptz | Creation timestamp                |
-
-**Constraints:** UNIQUE(participant_1, participant_2), CHECK (participant_1 != participant_2)
+| Column        | Type                     |
+|---------------|--------------------------|
+| id            | uuid                     |
+| room_name     | text                     |
+| share_code    | text                     |
+| participant_1 | uuid                     |
+| participant_2 | uuid                     |
+| created_at    | timestamp with time zone |
 
 #### `messages`
-| Column    | Type      | Description                    |
-|-----------|-----------|--------------------------------|
-| id        | uuid      | Primary key                    |
-| room_id   | uuid      | FK to rooms (CASCADE delete)   |
-| sender_id | uuid      | FK to profiles                 |
-| content   | text      | Message text                   |
-| created_at| timestamptz | Creation timestamp          |
+| Column     | Type                     |
+|------------|--------------------------|
+| id         | uuid                     |
+| room_id    | uuid                     |
+| sender_id  | uuid                     |
+| content    | text                     |
+| created_at | timestamp with time zone |
 
-### Functions & Triggers
-- **handle_new_user()**: Creates profile automatically on user registration
-- **Trigger on_auth_user_created**: Executes after INSERT on auth.users
+#### `user_settings`
+| Column               | Type                     |
+|----------------------|--------------------------|
+| user_id              | uuid                     |
+| assistant_enabled    | boolean                  |
+| writing_mode         | text                     |
+| translation_language | text                     |
+| created_at           | timestamp with time zone |
+| updated_at           | timestamp with time zone |
 
-### RLS Policies
+### RLS Policies (exact names)
 
-- **profiles SELECT**: All authenticated users can view
-- **profiles UPDATE**: Only own profile
-- **rooms SELECT**: Only participants can view
-- **rooms INSERT**: Any authenticated user
-- **rooms DELETE**: Only participants
-- **messages SELECT**: Only room participants can read
-- **messages INSERT**: Only with your own sender_id
+- `rooms_delete` (DELETE): `(auth.uid() = participant_1) OR (auth.uid() = participant_2)`
+- `rooms_insert` (INSERT, WITH CHECK): `auth.uid() = participant_1`
+- `rooms_select` (SELECT): `(auth.uid() = participant_1) OR (auth.uid() = participant_2)`
+- `rooms_select_open_for_join` (SELECT): `participant_2 IS NULL`
+- `rooms_update_unirse` (UPDATE):
+  - USING: `(participant_2 IS NULL) AND (participant_1 <> auth.uid())`
+  - WITH CHECK: `(participant_2 = auth.uid()) AND (participant_1 <> auth.uid())`
+- `messages_insert` (INSERT, WITH CHECK): `auth.uid() = sender_id`
+- `messages_select` (SELECT): participant must belong to message room
+- `Users can insert own settings` (INSERT, WITH CHECK): `auth.uid() = user_id`
+- `Users can update own settings` (UPDATE): `auth.uid() = user_id`
+- `Users can view own settings` (SELECT): `auth.uid() = user_id`
+
+### Functions
+- `handle_new_user()`
+- `handle_new_user_settings()`
+- `set_updated_at_user_settings()`
+
+### Triggers
+- `on_update_user_settings`
+  - Table: `user_settings`
+  - Timing: `BEFORE UPDATE`
+  - Definition: `EXECUTE FUNCTION set_updated_at_user_settings()`
 
 ---
 
-## Common Patterns
+## API Contracts (current)
 
-### Client Component with Props
-```typescript
-"use client";
-import { TypeA, TypeB } from "../types/database";
+### `POST /api/improve`
+- Input: `{ action: "improve" | "translate", text: string (1..1500) }`
+- Validation: Zod
+- Possible status codes: `200`, `400`, `401`, `403`, `429`, `500`
 
-interface Props {
-  propA: TypeA;
-  propB: TypeB;
-}
-
-export default function Component({ propA, propB }: Props) {
-  // component code
-}
-```
-
-### API Route Handler
-```typescript
-import { NextResponse } from "next/server";
-
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    // validation
-    // logic
-    return NextResponse.json({ data: result });
-  } catch (error: any) {
-    console.error("ROUTE_ERROR:", error);
-    return NextResponse.json(
-      { error: "User-friendly message" },
-      { status: 500 }
-    );
-  }
-}
-```
-
-### Supabase Query with Error Handling
-```typescript
-const { data, error } = await supabase
-  .from("table")
-  .select("*")
-  .eq("field", value);
-
-if (error) {
-  console.error("Query error:", error);
-  return;
-}
-```
+### `POST /api/users/meta`
+- Input: `{ ids: string[] }` where `ids` are UUID, max 50
+- Authorization: only returns users that share room scope with requester
+- Possible status codes: `200`, `400`, `401`, `429`, `500`
 
 ---
 
 ## Notes for Agents
-- This is a Spanish-language chat application
-- Some variables/functions use Spanish names (e.g., `crearSala`, `mensajes`)
-- Maintain existing naming conventions when modifying code
-- Tailwind v4 uses CSS-native `@import "tailwindcss"` instead of `@tailwind` directives
+- App language is Spanish
+- Some code identifiers are Spanish (`crearSala`, `mensajes`, etc.)
+- Keep naming conventions consistent with existing code
+- Do not document DB objects not confirmed in project context

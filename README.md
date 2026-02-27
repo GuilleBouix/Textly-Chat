@@ -1,119 +1,162 @@
-# Textly Chat: Chat Dual con IA Asistida.
+# Textly Chat - Chat dual con IA asistida
 
-Este documento describe la logica, la arquitectura de datos y el flujo de trabajo de la aplicacion.
+Documentacion tecnica del proyecto: stack, arquitectura de datos, seguridad aplicada en capa app y flujos funcionales.
 
-## 1. Stack tecnologico
+## 1) Stack actual
 
-- **Framework:** Next.js 15 (App Router)
-- **Estilos:** Tailwind CSS
-- **Base de datos y tiempo real:** Supabase
-- **IA:** Google Gemini 1.5 Flash (via Route Handler seguro)
-- **Autenticacion:** Supabase Auth (Google Provider)
+- **Frontend/SSR**: Next.js 16.1.6 (App Router)
+- **UI**: React 19.2.3 + Tailwind CSS v4
+- **Backend de datos**: Supabase (Auth, Postgres, Realtime)
+- **IA**: Google Gemini via route handler (`/api/improve`)
+- **Seguridad app**: Zod + Upstash Redis + Upstash Ratelimit
+- **Gestor de paquetes**: pnpm
 
-## 2. Arquitectura de datos (Supabase)
+## 2) Arquitectura de datos (Supabase)
 
-Se usan tres tablas principales con **RLS (Row Level Security)** activado para garantizar que cada usuario solo acceda a sus datos.
+### Tablas y columnas
 
-### `profiles` (perfiles de usuario)
+#### `profiles`
+| Column     | Type                     |
+|------------|--------------------------|
+| id         | uuid                     |
+| username   | text                     |
+| email      | text                     |
+| created_at | timestamp with time zone |
 
-- `id`: UUID (FK a auth.users, PK)
-- `email`: email del usuario (UNIQUE NOT NULL)
-- `username`: nombre de usuario
-- `created_at`: fecha de creacion
+#### `rooms`
+| Column        | Type                     |
+|---------------|--------------------------|
+| id            | uuid                     |
+| room_name     | text                     |
+| share_code    | text                     |
+| participant_1 | uuid                     |
+| participant_2 | uuid                     |
+| created_at    | timestamp with time zone |
 
-### `rooms` (salas de chat)
+#### `messages`
+| Column     | Type                     |
+|------------|--------------------------|
+| id         | uuid                     |
+| room_id    | uuid                     |
+| sender_id  | uuid                     |
+| content    | text                     |
+| created_at | timestamp with time zone |
 
-- `id`: UUID unico
-- `room_name`: nombre de la sala (opcional)
-- `participant_1`: UUID del primer participante (FK a profiles)
-- `participant_2`: UUID del segundo participante (FK a profiles)
-- `created_at`: fecha de creacion
+#### `user_settings`
+| Column               | Type                     |
+|----------------------|--------------------------|
+| user_id              | uuid                     |
+| assistant_enabled    | boolean                  |
+| writing_mode         | text                     |
+| translation_language | text                     |
+| created_at           | timestamp with time zone |
+| updated_at           | timestamp with time zone |
 
-**Restricciones:**
-- UNIQUE(participant_1, participant_2)
-- CHECK (participant_1 != participant_2)
+## 3) Politicas RLS (exactas)
 
-### `messages` (mensajes)
+### `rooms`
+- `rooms_delete` (DELETE): `(auth.uid() = participant_1) OR (auth.uid() = participant_2)`
+- `rooms_insert` (INSERT, WITH CHECK): `auth.uid() = participant_1`
+- `rooms_select` (SELECT): `(auth.uid() = participant_1) OR (auth.uid() = participant_2)`
+- `rooms_select_open_for_join` (SELECT): `participant_2 IS NULL`
+  - Esta policy permite descubrir salas abiertas para unirse.
+- `rooms_update_unirse` (UPDATE):
+  - USING: `(participant_2 IS NULL) AND (participant_1 <> auth.uid())`
+  - WITH CHECK: `(participant_2 = auth.uid()) AND (participant_1 <> auth.uid())`
 
-- `id`: UUID unico
-- `room_id`: clave foranea hacia la sala
-- `sender_id`: ID del usuario que envia (FK a profiles)
-- `content`: texto del mensaje
-- `created_at`: timestamp con zona horaria
+### `messages`
+- `messages_insert` (INSERT, WITH CHECK): `auth.uid() = sender_id`
+- `messages_select` (SELECT): solo si el usuario autenticado participa en la sala del mensaje
 
-### Funciones y Triggers
+### `user_settings`
+- `Users can insert own settings` (INSERT, WITH CHECK): `auth.uid() = user_id`
+- `Users can update own settings` (UPDATE): `auth.uid() = user_id`
+- `Users can view own settings` (SELECT): `auth.uid() = user_id`
 
-- **handle_new_user()**: Funcion que crea automaticamente un perfil al registrarse el usuario en auth.users
-- **Trigger on_auth_user_created**: Ejecuta handle_new_user() despues de cada INSERT en auth.users
+## 4) Funciones y triggers
 
-### Politicas de seguridad (RLS)
+### Funciones
+- `handle_new_user()`
+- `handle_new_user_settings()`
+- `set_updated_at_user_settings()`
 
-**profiles:**
-- SELECT: cualquier usuario autenticado puede ver perfiles
-- UPDATE: solo puedes actualizar tu propio perfil
+### Trigger confirmado
+- Tabla: `user_settings`
+- Nombre: `on_update_user_settings`
+- Evento: `UPDATE`
+- Momento: `BEFORE`
+- Definicion: `EXECUTE FUNCTION set_updated_at_user_settings()`
 
-**rooms:**
-- SELECT: solo participantes de la sala pueden ver
-- INSERT: cualquier usuario autenticado puede crear
-- DELETE: solo participantes pueden borrar
+## 5) Hardening aplicado (Fase 1 - capa app)
 
-**messages:**
-- SELECT: solo participantes de la sala pueden leer
-- INSERT: solo puedes enviar con tu propio sender_id
+- Validacion de payloads con Zod en endpoints sensibles.
+- Rate limiting distribuido con Upstash en:
+  - `POST /api/improve`
+  - `POST /api/users/meta`
+- Trazabilidad de request con `requestId`.
+- Hash de IP para observabilidad sin exponer IP cruda.
+- Logging estructurado de eventos de seguridad.
+- Control de acceso en `/api/users/meta` por pertenencia de salas compartidas.
+- Headers de seguridad globales en `next.config.ts`:
+  - CSP
+  - `X-Frame-Options`
+  - `X-Content-Type-Options`
+  - `Referrer-Policy`
+  - `Permissions-Policy`
+  - HSTS en produccion
+- Proteccion de rutas con `middleware.ts` y excepciones de acceso publico.
 
-## 3. Funciones principales y flujos logicos
+## 6) Variables de entorno
 
-### A) Comunicacion en tiempo real
-
-- **Envio optimista:** al presionar "Enviar", el mensaje aparece de inmediato en UI mientras se persiste en la base de datos.
-- **Suscripcion realtime:** la app escucha nuevos `INSERT` en `messages`; si `sender_id` no coincide con el usuario actual, renderiza el mensaje entrante.
-- **Indicador de escritura:** se utiliza Supabase Broadcast para eventos efimeros de "esta escribiendo..." sin escribir en base de datos.
-
-### B) Funcion de mejora de redaccion (IA)
-
-1. El usuario escribe en el input y activa la mejora con boton "IA" (o atajo).
-2. El texto se envia a un Route Handler interno de Next.js para proteger la API Key.
-3. Se guarda un respaldo temporal del texto original (`backup state`).
-4. La IA devuelve una sugerencia de redaccion.
-5. El usuario puede:
-   - **Aceptar:** reemplaza el input por la sugerencia.
-   - **Rechazar / `Esc`:** descarta la sugerencia y restaura el texto original.
-
-## 4. Configuracion de IA (Prompt Engineering)
-
-El sistema usa un prompt oculto para que Gemini actue como herramienta de correccion, no como chat:
-
-```text
-Eres un corrector de estilo profesional. Tu unica tarea es recibir un mensaje y devolver una version mas clara, profesional y sin errores gramaticales. NO respondas con saludos ni explicaciones. Solo devuelve el texto corregido. Si el texto no puede mejorarse, devuelvelo exactamente igual.
-```
-
-## 5. Medidas de seguridad clave
-
-- **Proteccion de API Key:** la clave de Gemini nunca se expone al navegador; permanece en servidor.
-- **Validacion de sesion:** antes de procesar texto con IA, el backend verifica sesion activa en Supabase.
-- **RLS en base de datos:** las politicas SQL impiden leer mensajes ajenos sin credenciales validas de participante.
-- **Rate limiting distribuido:** Upstash Redis limita abuso en `/api/improve` y `/api/users/meta`.
-- **Validacion de payloads:** Zod valida entradas en endpoints sensibles.
-- **Autorizacion de metadata:** `/api/users/meta` solo devuelve usuarios que comparten sala con el solicitante.
-
-## 6. Variables de entorno
-
-Requeridas:
+### Requeridas
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GEMINI_API_KEY`
 
-Nuevas para seguridad/rate limit:
+### Seguridad / Rate limit
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 
-Opcionales:
+### Opcionales
 - `GEMINI_MODEL` (default: `gemini-2.5-flash`)
 - `RATE_LIMIT_IMPROVE_MAX` (default: `20`)
 - `RATE_LIMIT_META_MAX` (default: `60`)
 
-## 7. Experiencia de usuario (UX)
+## 7) Flujos funcionales actuales
 
-- **Bloqueo preventivo:** mientras la IA genera sugerencia, el input se bloquea para evitar conflictos de edicion.
-- **Manejo de errores:** si la IA falla, el input se desbloquea y el usuario puede enviar el texto original sin perdida.
+### Chat en tiempo real
+- Carga de salas y mensajes desde Supabase.
+- Suscripciones realtime para nuevos mensajes.
+- Envio de mensajes con validacion de sala activa.
+
+### IA asistida
+- Acciones soportadas: mejorar redaccion o traducir.
+- Configuracion por usuario en `user_settings`:
+  - `assistant_enabled`
+  - `writing_mode`
+  - `translation_language`
+- Respuestas de error esperables:
+  - `400` payload invalido
+  - `401` no autenticado
+  - `403` operacion no permitida
+  - `429` limite excedido
+  - `500` error interno
+
+## 8) Endpoints principales
+
+### `POST /api/improve`
+- Input: `{ action: "improve" | "translate", text: string }`
+- Reglas: `text` entre 1 y 1500 chars
+- Seguridad: auth + zod + rate limit + logs estructurados
+
+### `POST /api/users/meta`
+- Input: `{ ids: string[] }` (UUID, max 50)
+- Seguridad: auth + zod + rate limit + filtro por alcance de sala
+- Devuelve solo usuarios autorizados por contexto de chat
+
+## 9) Limitaciones / siguiente fase
+
+Esta documentacion cubre el hardening aplicado en la capa app (frontend + route handlers).
+
+El reforzamiento adicional en capa DB (fase 2), como endurecimiento extra de politicas o funciones SQL complementarias, se documentara cuando se implemente.
