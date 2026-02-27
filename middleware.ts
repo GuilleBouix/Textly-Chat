@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const PUBLIC_PATHS = new Set(["/login"]);
+
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
   let response = NextResponse.next({
     request: { headers: request.headers },
   });
@@ -15,15 +19,13 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
 
           response = NextResponse.next({ request });
 
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
         },
       },
     },
@@ -33,11 +35,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && request.nextUrl.pathname === "/") {
+  const isAuthCallback = pathname.startsWith("/auth/callback");
+  const isPublicPath = PUBLIC_PATHS.has(pathname) || isAuthCallback;
+
+  if (!user && !isPublicPath) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (user && request.nextUrl.pathname === "/login") {
+  if (user && pathname === "/login") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -45,5 +50,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|logo.svg).*)"],
 };

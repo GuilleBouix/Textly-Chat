@@ -28,7 +28,7 @@ export default function MessageInput({
   return (
     <footer className="relative bg-transparent p-4">
       {cargandoIA ? (
-        <div className="mb-3 flex justify-center">
+        <div className="mb-3 flex justify-center animate-fade-up animate-delay-none">
           <div className="inline-flex items-center gap-2 rounded-xl border border-violet-500 bg-zinc-900 px-3 py-1.5">
             <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-400 border-t-violet-200" />
             <p className="text-[11px] font-medium text-violet-100">

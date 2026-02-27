@@ -92,8 +92,28 @@ Eres un corrector de estilo profesional. Tu unica tarea es recibir un mensaje y 
 - **Proteccion de API Key:** la clave de Gemini nunca se expone al navegador; permanece en servidor.
 - **Validacion de sesion:** antes de procesar texto con IA, el backend verifica sesion activa en Supabase.
 - **RLS en base de datos:** las politicas SQL impiden leer mensajes ajenos sin credenciales validas de participante.
+- **Rate limiting distribuido:** Upstash Redis limita abuso en `/api/improve` y `/api/users/meta`.
+- **Validacion de payloads:** Zod valida entradas en endpoints sensibles.
+- **Autorizacion de metadata:** `/api/users/meta` solo devuelve usuarios que comparten sala con el solicitante.
 
-## 6. Experiencia de usuario (UX)
+## 6. Variables de entorno
+
+Requeridas:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `GEMINI_API_KEY`
+
+Nuevas para seguridad/rate limit:
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+Opcionales:
+- `GEMINI_MODEL` (default: `gemini-2.5-flash`)
+- `RATE_LIMIT_IMPROVE_MAX` (default: `20`)
+- `RATE_LIMIT_META_MAX` (default: `60`)
+
+## 7. Experiencia de usuario (UX)
 
 - **Bloqueo preventivo:** mientras la IA genera sugerencia, el input se bloquea para evitar conflictos de edicion.
 - **Manejo de errores:** si la IA falla, el input se desbloquea y el usuario puede enviar el texto original sin perdida.
