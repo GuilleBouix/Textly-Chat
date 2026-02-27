@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Sala } from "../types/database";
+import { guardarCache, leerCache } from "../lib/cacheLocal";
 import { generarCodigoSala } from "../lib/utils";
 
 // ---------------- TIPOS ----------------
@@ -11,6 +12,11 @@ type PerfilCache = {
   nombre: string;
   avatarUrl: string | null;
 };
+
+// ---------------- CONSTANTES ----------------
+const TTL_CACHE_MS = 5 * 60 * 1000;
+const PREFIJO_CACHE_USUARIOS = "textly_cache_usuarios_v1";
+const PREFIJO_CACHE_SALAS = "textly_cache_salas_v1";
 
 // ---------------- FUNCIONES ----------------
 const cargarPerfilesDesdeAPI = async (ids: string[]): Promise<PerfilCache[]> => {
@@ -41,6 +47,14 @@ const obtenerIdsPendientes = (
   return idsUnicos.filter((id) => !perfilesActuales[id] && !enCurso.has(id));
 };
 
+const obtenerClaveCacheUsuarios = (usuarioId: string): string => {
+  return `${PREFIJO_CACHE_USUARIOS}:${usuarioId}`;
+};
+
+const obtenerClaveCacheSalas = (usuarioId: string): string => {
+  return `${PREFIJO_CACHE_SALAS}:${usuarioId}`;
+};
+
 // ---------------- HOOK ----------------
 export const useRooms = (usuarioId: string | undefined) => {
   const [salas, setSalas] = useState<Sala[]>([]);
@@ -54,6 +68,36 @@ export const useRooms = (usuarioId: string | undefined) => {
   useEffect(() => {
     perfilesRef.current = perfiles;
   }, [perfiles]);
+
+  useEffect(() => {
+    if (!usuarioId) return;
+
+    const claveCacheUsuarios = obtenerClaveCacheUsuarios(usuarioId);
+    const lecturaUsuarios = leerCache<Record<string, PerfilCache>>(claveCacheUsuarios);
+    if (lecturaUsuarios.valido && lecturaUsuarios.datos) {
+      setPerfiles(lecturaUsuarios.datos);
+    }
+
+    const claveCacheSalas = obtenerClaveCacheSalas(usuarioId);
+    const lecturaSalas = leerCache<Sala[]>(claveCacheSalas);
+    if (lecturaSalas.valido && lecturaSalas.datos) {
+      setSalas(lecturaSalas.datos);
+      setIdSalaActiva((prev) => {
+        if (!prev) return prev;
+        return lecturaSalas.datos?.some((s) => s.id === prev) ? prev : null;
+      });
+    }
+  }, [usuarioId]);
+
+  useEffect(() => {
+    if (!usuarioId) return;
+    guardarCache(obtenerClaveCacheUsuarios(usuarioId), perfiles, TTL_CACHE_MS);
+  }, [usuarioId, perfiles]);
+
+  useEffect(() => {
+    if (!usuarioId) return;
+    guardarCache(obtenerClaveCacheSalas(usuarioId), salas, TTL_CACHE_MS);
+  }, [usuarioId, salas]);
 
   const agregarPerfiles = (lista: PerfilCache[]): void => {
     if (!lista.length) return;

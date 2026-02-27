@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = new Set(["/login"]);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   let response = NextResponse.next({
