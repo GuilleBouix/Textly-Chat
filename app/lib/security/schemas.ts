@@ -1,13 +1,18 @@
+// ---------------- IMPORTACIONES ----------------
 import { z } from "zod";
 
-export const improveSchema = z.object({
+// ---------------- CONSTANTES ----------------
+// Valida el payload de mejora o traducción de mensaje
+export const esquemaMejora = z.object({
   action: z.enum(["improve", "translate"]),
   text: z.string().trim().min(1).max(1500),
 });
 
-export const usersMetaSchema = z.object({
+// Valida el payload de consulta de metadatos de usuarios
+export const esquemaMetaUsuarios = z.object({
   ids: z.array(z.string().uuid()).min(1).max(50),
 });
 
-export type ImproveInput = z.infer<typeof improveSchema>;
-export type UsersMetaInput = z.infer<typeof usersMetaSchema>;
+// ---------------- TIPOS ----------------
+export type EntradaMejora = z.infer<typeof esquemaMejora>;
+export type EntradaMetaUsuarios = z.infer<typeof esquemaMetaUsuarios>;

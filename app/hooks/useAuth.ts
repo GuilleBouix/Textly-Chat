@@ -1,9 +1,9 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { pickAvatarFromMetadata } from "../lib/avatar";
 
-// ----------- TIPOS -----------
+// ---------------- TIPOS ----------------
 export type UsuarioPerfil = {
   id: string;
   email?: string;
@@ -12,7 +12,7 @@ export type UsuarioPerfil = {
   avatarUrl?: string | null;
 };
 
-// ----------- FUNCIONES -----------
+// ---------------- FUNCIONES ----------------
 const cerrarSesion = async (): Promise<void> => {
   const { error } = await supabase.auth.signOut();
   if (error) {
@@ -24,7 +24,7 @@ const cerrarSesion = async (): Promise<void> => {
   window.location.href = "/login";
 };
 
-// ----------- EXPORT HOOK -----------
+// ---------------- HOOK ----------------
 export const useAuth = () => {
   const [usuario, setUsuario] = useState<UsuarioPerfil | null>(null);
 
@@ -76,3 +76,4 @@ export const useAuth = () => {
     cerrarSesion,
   };
 };
+

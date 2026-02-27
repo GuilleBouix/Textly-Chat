@@ -1,8 +1,8 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 "use client";
 import { ReactNode } from "react";
 
-// ----------- TIPOS -----------
+// ---------------- TIPOS ----------------
 interface ModalProps {
   titulo: string;
   descripcion: string;
@@ -14,7 +14,7 @@ interface ModalProps {
   textoConfirmar?: string;
 }
 
-// ----------- COMPONENTE -----------
+// ---------------- COMPONENTE ----------------
 export default function Modal({
   titulo,
   descripcion,
@@ -56,3 +56,4 @@ export default function Modal({
     </div>
   );
 }
+

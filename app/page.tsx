@@ -1,4 +1,4 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 "use client";
 import { useReducer, useRef } from "react";
 import { useChat } from "./hooks/useChat";
@@ -12,7 +12,8 @@ import {
 import { Modal } from "./components/ui";
 import { SidebarSkeleton, ChatSkeleton } from "./components/skeletons";
 
-type ChatUIState = {
+// ---------------- TIPOS ----------------
+type EstadoInterfazChat = {
   mostrarModalUnirse: boolean;
   mostrarModalCrear: boolean;
   nombreSalaNueva: string;
@@ -20,14 +21,15 @@ type ChatUIState = {
   codigoEntrada: string;
 };
 
-type ChatUIAction =
+type AccionInterfazChat =
   | { type: "setMostrarModalUnirse"; payload: boolean }
   | { type: "setMostrarModalCrear"; payload: boolean }
   | { type: "setNombreSalaNueva"; payload: string }
   | { type: "setIdSalaAEliminar"; payload: string | null }
   | { type: "setCodigoEntrada"; payload: string };
 
-const initialUIState: ChatUIState = {
+// ---------------- CONSTANTES ----------------
+const estadoInicialInterfaz: EstadoInterfazChat = {
   mostrarModalUnirse: false,
   mostrarModalCrear: false,
   nombreSalaNueva: "",
@@ -35,29 +37,32 @@ const initialUIState: ChatUIState = {
   codigoEntrada: "",
 };
 
-const chatUIReducer = (
-  state: ChatUIState,
-  action: ChatUIAction,
-): ChatUIState => {
-  switch (action.type) {
+// ---------------- FUNCIONES ----------------
+// Actualiza estado de UI local del chat según la acción recibida
+const reductorInterfazChat = (
+  estadoActual: EstadoInterfazChat,
+  accion: AccionInterfazChat,
+): EstadoInterfazChat => {
+  switch (accion.type) {
     case "setMostrarModalUnirse":
-      return { ...state, mostrarModalUnirse: action.payload };
+      return { ...estadoActual, mostrarModalUnirse: accion.payload };
     case "setMostrarModalCrear":
-      return { ...state, mostrarModalCrear: action.payload };
+      return { ...estadoActual, mostrarModalCrear: accion.payload };
     case "setNombreSalaNueva":
-      return { ...state, nombreSalaNueva: action.payload };
+      return { ...estadoActual, nombreSalaNueva: accion.payload };
     case "setIdSalaAEliminar":
-      return { ...state, idSalaAEliminar: action.payload };
+      return { ...estadoActual, idSalaAEliminar: accion.payload };
     case "setCodigoEntrada":
-      return { ...state, codigoEntrada: action.payload };
+      return { ...estadoActual, codigoEntrada: accion.payload };
     default:
-      return state;
+      return estadoActual;
   }
 };
 
-// ----------- COMPONENTE PRINCIPAL -----------
+// ---------------- COMPONENTE_PRINCIPAL ----------------
 export default function ChatPage() {
-  // Hook principal de chat
+  // ---------------- HOOK ----------------
+  // Consume el hook principal que orquesta auth, salas, mensajes e IA
   const {
     cargando,
     usuario,
@@ -83,11 +88,13 @@ export default function ChatPage() {
     cerrarSesion,
   } = useChat();
 
-  // Estados de UI
-  const [uiState, dispatchUI] = useReducer(chatUIReducer, initialUIState);
+  // ---------------- ESTADO ----------------
+  // Gestiona el estado local de modales y formularios de la interfaz
+  const [estadoInterfaz, despacharInterfaz] = useReducer(reductorInterfazChat, estadoInicialInterfaz);
   const finMensajesRef = useRef<HTMLDivElement | null>(null);
 
-  // Obtener sala activa
+  // ---------------- VARIABLES_DERIVADAS ----------------
+  // Deriva la sala activa y el perfil del otro participante para cabecera
   const salaActiva = salas.find((s) => s.id === idSalaActiva);
   const idParticipanteOtro =
     salaActiva && usuario?.id
@@ -99,36 +106,41 @@ export default function ChatPage() {
     ? perfiles[idParticipanteOtro]
     : null;
 
-  // Funciones handler
+  // ---------------- FUNCIONES ----------------
+  // Confirma unión de sala por código y limpia formulario al completar
   const handleConfirmarUnion = async (): Promise<void> => {
-    const resultado = await unirseASala(uiState.codigoEntrada);
+    const resultado = await unirseASala(estadoInterfaz.codigoEntrada);
     if (resultado.success) {
-      dispatchUI({ type: "setMostrarModalUnirse", payload: false });
-      dispatchUI({ type: "setCodigoEntrada", payload: "" });
+      despacharInterfaz({ type: "setMostrarModalUnirse", payload: false });
+      despacharInterfaz({ type: "setCodigoEntrada", payload: "" });
     } else {
       alert(resultado.error);
     }
   };
 
+  // Confirma eliminación de sala seleccionada en modal de confirmación
   const handleConfirmarEliminacion = (): void => {
-    if (uiState.idSalaAEliminar) {
-      eliminarSala(uiState.idSalaAEliminar);
-      dispatchUI({ type: "setIdSalaAEliminar", payload: null });
+    if (estadoInterfaz.idSalaAEliminar) {
+      eliminarSala(estadoInterfaz.idSalaAEliminar);
+      despacharInterfaz({ type: "setIdSalaAEliminar", payload: null });
     }
   };
 
+  // Crea una nueva sala y resetea el estado de creación local
   const handleConfirmarCreacion = (): void => {
-    crearSala(uiState.nombreSalaNueva);
-    dispatchUI({ type: "setMostrarModalCrear", payload: false });
-    dispatchUI({ type: "setNombreSalaNueva", payload: "" });
+    crearSala(estadoInterfaz.nombreSalaNueva);
+    despacharInterfaz({ type: "setMostrarModalCrear", payload: false });
+    despacharInterfaz({ type: "setNombreSalaNueva", payload: "" });
   };
 
+  // Envía el mensaje y desplaza al final de la conversación
   const handleEnviarMensaje = (e: React.FormEvent): void => {
     enviarMensaje(e);
     finMensajesRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Render
+  // ---------------- RETORNO ----------------
+  // Renderiza layout principal, barra lateral, chat y modales
   return (
     <div className="relative flex h-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans">
       {/* Background effects */}
@@ -147,13 +159,13 @@ export default function ChatPage() {
           idSalaActiva={idSalaActiva || ""}
           alSeleccionarSala={setIdSalaActiva}
           alEliminarSala={(id) =>
-            dispatchUI({ type: "setIdSalaAEliminar", payload: id })
+            despacharInterfaz({ type: "setIdSalaAEliminar", payload: id })
           }
           abrirModalUnirse={() =>
-            dispatchUI({ type: "setMostrarModalUnirse", payload: true })
+            despacharInterfaz({ type: "setMostrarModalUnirse", payload: true })
           }
           abrirModalCrear={() =>
-            dispatchUI({ type: "setMostrarModalCrear", payload: true })
+            despacharInterfaz({ type: "setMostrarModalCrear", payload: true })
           }
           alCerrarSesion={cerrarSesion}
           configIA={configIA}
@@ -180,9 +192,9 @@ export default function ChatPage() {
               finRef={finMensajesRef}
             />
             <MessageInput
-              value={nuevoMensaje}
-              onChange={setNuevoMensaje}
-              onSubmit={handleEnviarMensaje}
+              valor={nuevoMensaje}
+              alCambiar={setNuevoMensaje}
+              alEnviar={handleEnviarMensaje}
               onMejorar={mejorarMensajeIA}
               onTraducir={traducirMensajeIA}
               asistenteIAActivo={asistenteIAActivo}
@@ -199,17 +211,17 @@ export default function ChatPage() {
       <Modal
         titulo="Unirse a una sala"
         descripcion="Ingresa el codigo compartido para entrar al chat."
-        abierto={uiState.mostrarModalUnirse}
+        abierto={estadoInterfaz.mostrarModalUnirse}
         alCerrar={() =>
-          dispatchUI({ type: "setMostrarModalUnirse", payload: false })
+          despacharInterfaz({ type: "setMostrarModalUnirse", payload: false })
         }
         alConfirmar={handleConfirmarUnion}
         textoConfirmar="Unirme"
       >
         <input
-          value={uiState.codigoEntrada}
+          value={estadoInterfaz.codigoEntrada}
           onChange={(e) =>
-            dispatchUI({ type: "setCodigoEntrada", payload: e.target.value })
+            despacharInterfaz({ type: "setCodigoEntrada", payload: e.target.value })
           }
           className="w-full bg-zinc-950 border border-zinc-800 p-3 rounded-xl outline-none focus:border-violet-500 transition-all font-mono tracking-widest uppercase text-center text-lg"
           placeholder="12345678"
@@ -221,8 +233,8 @@ export default function ChatPage() {
       <Modal
         titulo="Eliminar esta sala?"
         descripcion="Esto borrara todos los mensajes de forma permanente para ambos participantes."
-        abierto={!!uiState.idSalaAEliminar}
-        alCerrar={() => dispatchUI({ type: "setIdSalaAEliminar", payload: null })}
+        abierto={!!estadoInterfaz.idSalaAEliminar}
+        alCerrar={() => despacharInterfaz({ type: "setIdSalaAEliminar", payload: null })}
         alConfirmar={handleConfirmarEliminacion}
         colorBoton="bg-red-600 hover:bg-red-500"
         textoConfirmar="Eliminar para siempre"
@@ -232,18 +244,18 @@ export default function ChatPage() {
       <Modal
         titulo="Crear nueva sala"
         descripcion="Dale un nombre a tu sala de chat (maximo 25 caracteres)."
-        abierto={uiState.mostrarModalCrear}
+        abierto={estadoInterfaz.mostrarModalCrear}
         alCerrar={() => {
-          dispatchUI({ type: "setMostrarModalCrear", payload: false });
-          dispatchUI({ type: "setNombreSalaNueva", payload: "" });
+          despacharInterfaz({ type: "setMostrarModalCrear", payload: false });
+          despacharInterfaz({ type: "setNombreSalaNueva", payload: "" });
         }}
         alConfirmar={handleConfirmarCreacion}
         textoConfirmar="Crear sala"
       >
         <input
-          value={uiState.nombreSalaNueva}
+          value={estadoInterfaz.nombreSalaNueva}
           onChange={(e) =>
-            dispatchUI({
+            despacharInterfaz({
               type: "setNombreSalaNueva",
               payload: e.target.value.slice(0, 25),
             })
@@ -253,9 +265,10 @@ export default function ChatPage() {
           maxLength={25}
         />
         <p className="text-xs text-zinc-500 mt-2 text-right">
-          {uiState.nombreSalaNueva.length}/25
+          {estadoInterfaz.nombreSalaNueva.length}/25
         </p>
       </Modal>
     </div>
   );
 }
+

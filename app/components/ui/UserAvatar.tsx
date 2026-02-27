@@ -1,10 +1,10 @@
 "use client";
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 import Image from "next/image";
 import { useState } from "react";
 import { DEFAULT_AVATAR_SRC, normalizeAvatarUrl } from "../../lib/avatar";
 
-// ----------- TIPOS -----------
+// ---------------- TIPOS ----------------
 interface UserAvatarProps {
   src?: string | null;
   alt?: string;
@@ -57,7 +57,7 @@ const AvatarImage = ({ initialSrc, alt }: AvatarImageProps) => {
   );
 };
 
-// ----------- COMPONENTE -----------
+// ---------------- COMPONENTE ----------------
 export default function UserAvatar({
   src,
   alt = "Usuario",
@@ -81,3 +81,4 @@ export default function UserAvatar({
     </div>
   );
 }
+

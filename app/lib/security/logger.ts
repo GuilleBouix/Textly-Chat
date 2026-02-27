@@ -1,32 +1,39 @@
-type SecurityEvent =
+// ---------------- TIPOS ----------------
+type EventoSeguridad =
   | "rate_limited"
   | "auth_fail"
   | "meta_unauthorized_ids"
   | "improve_error"
   | "config_error";
 
-type SecurityLogLevel = "info" | "warn" | "error";
+type NivelLogSeguridad = "info" | "warn" | "error";
 
-export const logSecurityEvent = (
-  event: SecurityEvent,
-  data: Record<string, unknown>,
-  level: SecurityLogLevel = "info",
+// ---------------- FUNCIONES_EXPORTADAS ----------------
+// Registra un evento de seguridad con formato JSON estructurado
+export const registrarEventoSeguridad = (
+  evento: EventoSeguridad,
+  datos: Record<string, unknown>,
+  nivel: NivelLogSeguridad = "info",
 ): void => {
-  const payload = {
+  // Construye el objeto base con marca temporal para trazabilidad
+  const carga = {
     ts: new Date().toISOString(),
-    event,
-    ...data,
+    event: evento,
+    ...datos,
   };
 
-  if (level === "error") {
-    console.error(JSON.stringify(payload));
+  // Emite en error cuando el evento es crítico
+  if (nivel === "error") {
+    console.error(JSON.stringify(carga));
     return;
   }
 
-  if (level === "warn") {
-    console.warn(JSON.stringify(payload));
+  // Emite en warning para eventos de riesgo no crítico
+  if (nivel === "warn") {
+    console.warn(JSON.stringify(carga));
     return;
   }
 
-  console.info(JSON.stringify(payload));
+  // Emite en info para telemetría operativa
+  console.info(JSON.stringify(carga));
 };

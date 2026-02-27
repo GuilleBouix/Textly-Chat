@@ -1,4 +1,4 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 "use client";
 import { useState } from "react";
 import { LuLogOut, LuSettings } from "react-icons/lu";
@@ -12,7 +12,7 @@ import SettingsModal from "../ui/SettingsModal";
 import UserAvatar from "../ui/UserAvatar";
 import RoomItem from "./RoomItem";
 
-// ----------- TIPOS -----------
+// ---------------- TIPOS ----------------
 interface SidebarProps {
   usuario: {
     id: string;
@@ -37,7 +37,7 @@ interface SidebarProps {
   }) => Promise<void>;
 }
 
-// ----------- COMPONENTE -----------
+// ---------------- COMPONENTE ----------------
 export default function Sidebar({
   usuario,
   salas,
@@ -157,3 +157,4 @@ export default function Sidebar({
     </>
   );
 }
+

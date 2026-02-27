@@ -1,30 +1,35 @@
+// ---------------- IMPORTACIONES ----------------
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { pickAvatarFromMetadata } from "../../../lib/avatar";
-import { logSecurityEvent } from "../../../lib/security/logger";
-import { checkRateLimit } from "../../../lib/security/rate-limit";
-import { getRequestContext } from "../../../lib/security/request";
-import { usersMetaSchema } from "../../../lib/security/schemas";
+import { registrarEventoSeguridad } from "../../../lib/security/logger";
+import { verificarLimiteSolicitudes } from "../../../lib/security/rate-limit";
+import { obtenerContextoSolicitud } from "../../../lib/security/request";
+import { esquemaMetaUsuarios } from "../../../lib/security/schemas";
 
+// ---------------- CONSTANTES ----------------
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type BasicUser = {
+// ---------------- TIPOS ----------------
+type UsuarioBasico = {
   id: string;
   email?: string;
   nombre: string;
   avatarUrl: string | null;
 };
 
-type RoomParticipantsRow = {
+type FilaParticipantesSala = {
   participant_1: string;
   participant_2: string | null;
 };
 
+// ---------------- HANDLER ----------------
 export async function POST(req: Request) {
-  const { requestId, ipHash } = getRequestContext(req);
+  // Obtiene contexto base para logs y rate limit
+  const { idSolicitud, hashIp } = obtenerContextoSolicitud(req);
 
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -32,10 +37,10 @@ export async function POST(req: Request) {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!url || !anonKey || !serviceRoleKey) {
-      logSecurityEvent(
+      registrarEventoSeguridad(
         "config_error",
         {
-          requestId,
+          requestId: idSolicitud,
           route: "/api/users/meta",
           hasUrl: Boolean(url),
           hasAnonKey: Boolean(anonKey),
@@ -46,11 +51,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 
-    const cookieStore = await cookies();
-    const authClient = createServerClient(url, anonKey, {
+    // Crea cliente autenticado de Supabase para evaluar sesión y alcance
+    const almacenamientoCookies = await cookies();
+    const clienteAuth = createServerClient(url, anonKey, {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          return almacenamientoCookies.getAll();
         },
         setAll() {},
       },
@@ -58,37 +64,38 @@ export async function POST(req: Request) {
 
     const {
       data: { user },
-    } = await authClient.auth.getUser();
+    } = await clienteAuth.auth.getUser();
 
     if (!user) {
-      logSecurityEvent("auth_fail", { requestId, route: "/api/users/meta", ipHash }, "warn");
+      registrarEventoSeguridad("auth_fail", { requestId: idSolicitud, route: "/api/users/meta", ipHash: hashIp }, "warn");
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    const rl = await checkRateLimit({
-      namespace: "users_meta",
-      userId: user.id,
-      ipHash,
+    // Aplica límite de solicitudes por usuario e IP hasheada
+    const limite = await verificarLimiteSolicitudes({
+      espacio: "users_meta",
+      idUsuario: user.id,
+      hashIp,
     });
 
-    if (!rl.ok && "misconfigured" in rl) {
-      logSecurityEvent(
+    if (!limite.permitido && "malConfigurado" in limite) {
+      registrarEventoSeguridad(
         "config_error",
-        { requestId, route: "/api/users/meta", reason: "missing_upstash_env" },
+        { requestId: idSolicitud, route: "/api/users/meta", reason: "missing_upstash_env" },
         "error",
       );
       return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 
-    if (!rl.ok && "retryAfter" in rl) {
-      logSecurityEvent(
+    if (!limite.permitido && "reintentarEn" in limite) {
+      registrarEventoSeguridad(
         "rate_limited",
         {
-          requestId,
+          requestId: idSolicitud,
           route: "/api/users/meta",
           userId: user.id,
-          ipHash,
-          retryAfter: rl.retryAfter,
+          ipHash: hashIp,
+          retryAfter: limite.reintentarEn,
         },
         "warn",
       );
@@ -98,65 +105,68 @@ export async function POST(req: Request) {
         {
           status: 429,
           headers: {
-            "Retry-After": String(rl.retryAfter),
+            "Retry-After": String(limite.reintentarEn),
           },
         },
       );
     }
 
-    const body = await req.json().catch(() => null);
-    const parsed = usersMetaSchema.safeParse(body);
+    // Valida el payload y limita tamaño de ids permitidos
+    const cuerpo = await req.json().catch(() => null);
+    const entradaValidada = esquemaMetaUsuarios.safeParse(cuerpo);
 
-    if (!parsed.success) {
+    if (!entradaValidada.success) {
       return NextResponse.json({ error: "Payload invalido" }, { status: 400 });
     }
 
-    const requestedIds = [...new Set(parsed.data.ids)];
+    const idsSolicitados = [...new Set(entradaValidada.data.ids)];
 
-    const { data: roomsData, error: roomsError } = await authClient
+    // Carga salas donde participa el usuario para calcular alcance autorizado
+    const { data: datosSalas, error: errorSalas } = await clienteAuth
       .from("rooms")
       .select("participant_1, participant_2")
       .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
 
-    if (roomsError) {
-      logSecurityEvent(
+    if (errorSalas) {
+      registrarEventoSeguridad(
         "improve_error",
         {
-          requestId,
+          requestId: idSolicitud,
           route: "/api/users/meta",
           stage: "load_rooms",
           userId: user.id,
-          message: roomsError.message,
+          message: errorSalas.message,
         },
         "error",
       );
       return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 
-    const authorizedIds = new Set<string>([user.id]);
-    (roomsData as RoomParticipantsRow[] | null)?.forEach((room) => {
-      if (room.participant_1) authorizedIds.add(room.participant_1);
-      if (room.participant_2) authorizedIds.add(room.participant_2);
+    // Construye conjunto de usuarios autorizados por salas compartidas
+    const idsAutorizados = new Set<string>([user.id]);
+    (datosSalas as FilaParticipantesSala[] | null)?.forEach((sala) => {
+      if (sala.participant_1) idsAutorizados.add(sala.participant_1);
+      if (sala.participant_2) idsAutorizados.add(sala.participant_2);
     });
 
-    const authorizedRequestedIds = requestedIds.filter((id) => authorizedIds.has(id));
-    const unauthorizedCount = requestedIds.length - authorizedRequestedIds.length;
+    const idsAutorizadosSolicitados = idsSolicitados.filter((id) => idsAutorizados.has(id));
+    const cantidadNoAutorizados = idsSolicitados.length - idsAutorizadosSolicitados.length;
 
-    if (unauthorizedCount > 0) {
-      logSecurityEvent(
+    if (cantidadNoAutorizados > 0) {
+      registrarEventoSeguridad(
         "meta_unauthorized_ids",
         {
-          requestId,
+          requestId: idSolicitud,
           route: "/api/users/meta",
           userId: user.id,
-          requested: requestedIds.length,
-          rejected: unauthorizedCount,
+          requested: idsSolicitados.length,
+          rejected: cantidadNoAutorizados,
         },
         "warn",
       );
     }
 
-    if (!authorizedRequestedIds.length) {
+    if (!idsAutorizadosSolicitados.length) {
       return NextResponse.json({ users: [] }, { status: 200 });
     }
 
@@ -167,15 +177,16 @@ export async function POST(req: Request) {
       },
     });
 
-    const results = await Promise.all(
-      authorizedRequestedIds.map(async (id: string) => {
+    // Consulta metadatos solo para ids autorizados
+    const resultados = await Promise.all(
+      idsAutorizadosSolicitados.map(async (id: string) => {
         const { data, error } = await admin.auth.admin.getUserById(id);
 
         if (error) {
-          logSecurityEvent(
+          registrarEventoSeguridad(
             "improve_error",
             {
-              requestId,
+              requestId: idSolicitud,
               route: "/api/users/meta",
               stage: "admin_get_user",
               userId: user.id,
@@ -199,18 +210,18 @@ export async function POST(req: Request) {
             authUser.email?.split("@")[0] ||
             "Usuario",
           avatarUrl: pickAvatarFromMetadata(authUser.user_metadata as Record<string, unknown>),
-        } satisfies BasicUser;
+        } satisfies UsuarioBasico;
       }),
     );
 
-    return NextResponse.json({ users: results.filter(Boolean) }, { status: 200 });
+    return NextResponse.json({ users: resultados.filter(Boolean) }, { status: 200 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "unknown_error";
 
-    logSecurityEvent(
+    registrarEventoSeguridad(
       "improve_error",
       {
-        requestId,
+        requestId: idSolicitud,
         route: "/api/users/meta",
         message,
       },

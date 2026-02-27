@@ -1,10 +1,10 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Sala } from "../types/database";
 import { generarCodigoSala } from "../lib/utils";
 
-// ----------- TIPOS -----------
+// ---------------- TIPOS ----------------
 type PerfilCache = {
   id: string;
   email?: string;
@@ -12,7 +12,7 @@ type PerfilCache = {
   avatarUrl: string | null;
 };
 
-// ----------- FUNCIONES -----------
+// ---------------- FUNCIONES ----------------
 const cargarPerfilesDesdeAPI = async (ids: string[]): Promise<PerfilCache[]> => {
   try {
     const res = await fetch("/api/users/meta", {
@@ -41,7 +41,7 @@ const obtenerIdsPendientes = (
   return idsUnicos.filter((id) => !perfilesActuales[id] && !enCurso.has(id));
 };
 
-// ----------- EXPORT HOOK -----------
+// ---------------- HOOK ----------------
 export const useRooms = (usuarioId: string | undefined) => {
   const [salas, setSalas] = useState<Sala[]>([]);
   const [idSalaActiva, setIdSalaActiva] = useState<string | null>(null);
@@ -261,3 +261,4 @@ export const useRooms = (usuarioId: string | undefined) => {
     validarSalaActiva,
   };
 };
+

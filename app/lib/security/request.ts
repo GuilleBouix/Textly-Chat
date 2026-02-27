@@ -1,32 +1,40 @@
+// ---------------- IMPORTACIONES ----------------
 import { createHash, randomUUID } from "crypto";
 
-const FALLBACK_IP = "unknown";
+// ---------------- CONSTANTES ----------------
+const IP_POR_DEFECTO = "unknown";
 
-const getFirstForwardedIp = (forwardedFor: string | null): string | null => {
-  if (!forwardedFor) return null;
-  const first = forwardedFor.split(",")[0]?.trim();
-  return first || null;
+// ---------------- FUNCIONES ----------------
+// Obtiene la primera IP válida del header x-forwarded-for
+const obtenerPrimeraIpReenviada = (encabezado: string | null): string | null => {
+  if (!encabezado) return null;
+  const primeraIp = encabezado.split(",")[0]?.trim();
+  return primeraIp || null;
 };
 
-export const getClientIp = (request: Request): string => {
-  const forwardedIp = getFirstForwardedIp(request.headers.get("x-forwarded-for"));
-  const realIp = request.headers.get("x-real-ip")?.trim();
-  return forwardedIp || realIp || FALLBACK_IP;
+// Devuelve la IP cliente priorizando headers de proxy
+export const obtenerIpCliente = (solicitud: Request): string => {
+  const ipReenviada = obtenerPrimeraIpReenviada(solicitud.headers.get("x-forwarded-for"));
+  const ipReal = solicitud.headers.get("x-real-ip")?.trim();
+  return ipReenviada || ipReal || IP_POR_DEFECTO;
 };
 
-export const hashIp = (ip: string): string => {
+// Convierte la IP en hash corto para logs sin exponer el valor original
+export const hashearIp = (ip: string): string => {
   return createHash("sha256").update(ip).digest("hex").slice(0, 24);
 };
 
-export const getRequestId = (request: Request): string => {
-  return request.headers.get("x-request-id") || randomUUID();
+// Obtiene un id de solicitud desde headers o genera uno nuevo
+export const obtenerIdSolicitud = (solicitud: Request): string => {
+  return solicitud.headers.get("x-request-id") || randomUUID();
 };
 
-export const getRequestContext = (request: Request) => {
-  const clientIp = getClientIp(request);
+// Construye el contexto base usado en seguridad y observabilidad
+export const obtenerContextoSolicitud = (solicitud: Request) => {
+  const ipCliente = obtenerIpCliente(solicitud);
   return {
-    requestId: getRequestId(request),
-    clientIp,
-    ipHash: hashIp(clientIp),
+    idSolicitud: obtenerIdSolicitud(solicitud),
+    ipCliente,
+    hashIp: hashearIp(ipCliente),
   };
 };

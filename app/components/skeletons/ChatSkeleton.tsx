@@ -1,4 +1,4 @@
-// ----------- CHAT SKELETON -----------
+// ---------------- CHAT_SKELETON ----------------
 export default function ChatSkeleton() {
   const filasSkeleton = ["fila-1", "fila-2", "fila-3", "fila-4", "fila-5"];
 
@@ -49,3 +49,4 @@ export default function ChatSkeleton() {
     </section>
   );
 }
+

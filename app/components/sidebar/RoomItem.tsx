@@ -1,4 +1,4 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 import { useEffect, useRef, useState } from "react";
 import {
   LuCheck,
@@ -9,7 +9,7 @@ import {
 } from "react-icons/lu";
 import { Sala } from "../../types/database";
 
-// ----------- TIPOS -----------
+// ---------------- TIPOS ----------------
 interface RoomItemProps {
   sala: Sala;
   isActiva: boolean;
@@ -17,7 +17,7 @@ interface RoomItemProps {
   onDelete: (id: string) => void;
 }
 
-// ----------- COMPONENTE -----------
+// ---------------- COMPONENTE ----------------
 export default function RoomItem({
   sala,
   isActiva,
@@ -131,3 +131,4 @@ export default function RoomItem({
     </div>
   );
 }
+

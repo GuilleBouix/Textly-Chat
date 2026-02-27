@@ -1,4 +1,4 @@
-// ----------- SIDEBAR SKELETON -----------
+// ---------------- SIDEBAR_SKELETON ----------------
 export default function SidebarSkeleton() {
   const tarjetasSkeleton = ["sala-1", "sala-2", "sala-3"];
 
@@ -40,3 +40,4 @@ export default function SidebarSkeleton() {
     </aside>
   );
 }
+

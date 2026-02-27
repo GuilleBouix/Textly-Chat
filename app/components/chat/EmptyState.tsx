@@ -1,12 +1,12 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 import Image from "next/image";
 
-// ----------- TIPOS -----------
+// ---------------- TIPOS ----------------
 interface EmptyStateProps {
   nombreUsuario: string | undefined;
 }
 
-// ----------- COMPONENTE -----------
+// ---------------- COMPONENTE ----------------
 export default function EmptyState({ nombreUsuario }: EmptyStateProps) {
   const nombreMostrado = nombreUsuario || "Invitado";
 
@@ -39,3 +39,4 @@ export default function EmptyState({ nombreUsuario }: EmptyStateProps) {
     </div>
   );
 }
+

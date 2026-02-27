@@ -1,15 +1,18 @@
+// ---------------- IMPORTACIONES ----------------
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { logSecurityEvent } from "../../lib/security/logger";
-import { checkRateLimit } from "../../lib/security/rate-limit";
-import { getRequestContext } from "../../lib/security/request";
-import { improveSchema } from "../../lib/security/schemas";
+import { registrarEventoSeguridad } from "../../lib/security/logger";
+import { verificarLimiteSolicitudes } from "../../lib/security/rate-limit";
+import { obtenerContextoSolicitud } from "../../lib/security/request";
+import { esquemaMejora } from "../../lib/security/schemas";
 
+// ---------------- CONSTANTES ----------------
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+// ---------------- TIPOS ----------------
 type WritingMode = "formal" | "informal";
 type TranslationLanguage = "es" | "en" | "pt" | "it" | "de";
 
@@ -19,8 +22,8 @@ type UserSettingsRow = {
   translation_language: TranslationLanguage;
 };
 
-const apiKey = process.env.GEMINI_API_KEY;
-const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const claveApi = process.env.GEMINI_API_KEY;
+const nombreModelo = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 const DEFAULT_SETTINGS: UserSettingsRow = {
   assistant_enabled: true,
@@ -36,8 +39,10 @@ const LANGUAGE_LABEL: Record<TranslationLanguage, string> = {
   de: "aleman",
 };
 
-const buildImprovePrompt = (text: string, writingMode: WritingMode): string => {
-  const tono = writingMode === "formal" ? "formal y profesional" : "informal y natural";
+// ---------------- FUNCIONES_AUXILIARES ----------------
+// Construye el prompt para la acción de mejora de redacción
+const construirPromptMejora = (texto: string, modoRedaccion: WritingMode): string => {
+  const tono = modoRedaccion === "formal" ? "formal y profesional" : "informal y natural";
 
   return `Mejora el siguiente mensaje de chat.
 Reglas:
@@ -51,16 +56,17 @@ Reglas:
 - Devolver SOLO el texto final, sin comillas ni comentarios.
 
 Mensaje:
-${text}`;
+${texto}`;
 };
 
-const buildTranslatePrompt = (
-  text: string,
-  writingMode: WritingMode,
-  language: TranslationLanguage,
+// Construye el prompt para la acción de traducción
+const construirPromptTraduccion = (
+  texto: string,
+  modoRedaccion: WritingMode,
+  idioma: TranslationLanguage,
 ): string => {
-  const tono = writingMode === "formal" ? "formal y profesional" : "informal y natural";
-  const idiomaDestino = LANGUAGE_LABEL[language];
+  const tono = modoRedaccion === "formal" ? "formal y profesional" : "informal y natural";
+  const idiomaDestino = LANGUAGE_LABEL[idioma];
 
   return `Traduce el siguiente mensaje.
 Reglas:
@@ -72,37 +78,43 @@ Reglas:
 - Devolver SOLO el texto final, sin comillas ni comentarios.
 
 Mensaje:
-${text}`;
+${texto}`;
 };
 
+// ---------------- HANDLER ----------------
 export async function POST(req: Request) {
-  const { requestId, ipHash } = getRequestContext(req);
+  // Obtiene el contexto de solicitud para logs y rate limiting
+  const { idSolicitud, hashIp } = obtenerContextoSolicitud(req);
 
   try {
+    // Carga configuración mínima necesaria para atender la ruta
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const claveAnonima = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!apiKey || !url || !anonKey) {
-      logSecurityEvent(
+    // Corta temprano cuando falta configuración crítica
+    if (!claveApi || !url || !claveAnonima) {
+      registrarEventoSeguridad(
         "config_error",
-        { requestId, route: "/api/improve", hasApiKey: Boolean(apiKey), hasUrl: Boolean(url), hasAnonKey: Boolean(anonKey) },
+        { requestId: idSolicitud, route: "/api/improve", hasApiKey: Boolean(claveApi), hasUrl: Boolean(url), hasAnonKey: Boolean(claveAnonima) },
         "error",
       );
       return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 
-    const body = await req.json().catch(() => null);
-    const parsed = improveSchema.safeParse(body);
+    // Valida el payload de entrada con Zod
+    const cuerpo = await req.json().catch(() => null);
+    const entradaValidada = esquemaMejora.safeParse(cuerpo);
 
-    if (!parsed.success) {
+    if (!entradaValidada.success) {
       return NextResponse.json({ error: "Payload invalido" }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
-    const supabase = createServerClient(url, anonKey, {
+    // Crea cliente de Supabase ligado a cookies de sesión
+    const almacenamientoCookies = await cookies();
+    const supabase = createServerClient(url, claveAnonima, {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          return almacenamientoCookies.getAll();
         },
         setAll() {},
       },
@@ -113,34 +125,35 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      logSecurityEvent("auth_fail", { requestId, route: "/api/improve", ipHash }, "warn");
+      registrarEventoSeguridad("auth_fail", { requestId: idSolicitud, route: "/api/improve", ipHash: hashIp }, "warn");
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    const rl = await checkRateLimit({
-      namespace: "improve",
-      userId: user.id,
-      ipHash,
+    // Aplica límite de solicitudes por usuario e IP hasheada
+    const limite = await verificarLimiteSolicitudes({
+      espacio: "improve",
+      idUsuario: user.id,
+      hashIp,
     });
 
-    if (!rl.ok && "misconfigured" in rl) {
-      logSecurityEvent(
+    if (!limite.permitido && "malConfigurado" in limite) {
+      registrarEventoSeguridad(
         "config_error",
-        { requestId, route: "/api/improve", reason: "missing_upstash_env" },
+        { requestId: idSolicitud, route: "/api/improve", reason: "missing_upstash_env" },
         "error",
       );
       return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 
-    if (!rl.ok && "retryAfter" in rl) {
-      logSecurityEvent(
+    if (!limite.permitido && "reintentarEn" in limite) {
+      registrarEventoSeguridad(
         "rate_limited",
         {
-          requestId,
+          requestId: idSolicitud,
           route: "/api/improve",
           userId: user.id,
-          ipHash,
-          retryAfter: rl.retryAfter,
+          ipHash: hashIp,
+          retryAfter: limite.reintentarEn,
         },
         "warn",
       );
@@ -150,13 +163,14 @@ export async function POST(req: Request) {
         {
           status: 429,
           headers: {
-            "Retry-After": String(rl.retryAfter),
+            "Retry-After": String(limite.reintentarEn),
           },
         },
       );
     }
 
-    const { action, text } = parsed.data;
+    // Extrae valores ya validados para evitar lógica duplicada de parseo
+    const { action, text } = entradaValidada.data;
 
     const { data: settingsDataRaw, error: settingsError } = await supabase
       .from("user_settings")
@@ -165,10 +179,10 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (settingsError) {
-      logSecurityEvent(
+      registrarEventoSeguridad(
         "improve_error",
         {
-          requestId,
+          requestId: idSolicitud,
           route: "/api/improve",
           userId: user.id,
           stage: "load_settings",
@@ -184,14 +198,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Operacion no permitida" }, { status: 403 });
     }
 
+    // Construye el prompt según el tipo de acción solicitada
     const prompt =
       action === "improve"
-        ? buildImprovePrompt(text, settings.writing_mode)
-        : buildTranslatePrompt(text, settings.writing_mode, settings.translation_language);
+        ? construirPromptMejora(text, settings.writing_mode)
+        : construirPromptTraduccion(text, settings.writing_mode, settings.translation_language);
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: modelName });
-    const result = await model.generateContent(prompt);
+    // Ejecuta la llamada al modelo configurado y devuelve texto final
+    const clienteIa = new GoogleGenerativeAI(claveApi);
+    const modeloIa = clienteIa.getGenerativeModel({ model: nombreModelo });
+    const result = await modeloIa.generateContent(prompt);
     const response = await result.response;
     const output = response.text();
 
@@ -199,13 +215,14 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "unknown_error";
 
-    logSecurityEvent(
+    // Registra errores internos sin exponer detalles sensibles al cliente
+    registrarEventoSeguridad(
       "improve_error",
       {
-        requestId,
+        requestId: idSolicitud,
         route: "/api/improve",
         message,
-        model: modelName,
+        model: nombreModelo,
       },
       "error",
     );

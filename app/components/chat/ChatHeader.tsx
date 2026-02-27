@@ -1,7 +1,7 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 import UserAvatar from "../ui/UserAvatar";
 
-// ----------- TIPOS -----------
+// ---------------- TIPOS ----------------
 interface ChatHeaderProps {
   nombreSala: string | null;
   codigoSala: string | undefined;
@@ -12,7 +12,7 @@ interface ChatHeaderProps {
   } | null;
 }
 
-// ----------- COMPONENTE -----------
+// ---------------- COMPONENTE ----------------
 export default function ChatHeader({
   nombreSala,
   codigoSala,
@@ -48,3 +48,4 @@ export default function ChatHeader({
     </header>
   );
 }
+

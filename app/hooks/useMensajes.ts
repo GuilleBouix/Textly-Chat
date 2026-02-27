@@ -1,9 +1,9 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Mensaje } from "../types/database";
 
-// ----------- EXPORT HOOK -----------
+// ---------------- HOOK ----------------
 export const useMensajes = (
   idSalaActiva: string | null,
   usuarioId: string | undefined,
@@ -82,3 +82,4 @@ export const useMensajes = (
     setMensajes,
   };
 };
+

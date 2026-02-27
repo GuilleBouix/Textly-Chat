@@ -1,28 +1,29 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 import { Mensaje } from "../../types/database";
 import { formatearHora } from "../../lib/utils";
 import UserAvatar from "../ui/UserAvatar";
 
-// ----------- TIPOS -----------
-interface Perfil {
+// ---------------- TIPOS ----------------
+interface PerfilBurbuja {
   id: string;
   email?: string;
   nombre: string;
   avatarUrl: string | null;
 }
 
-interface MessageBubbleProps {
+interface PropiedadesBurbujaMensaje {
   mensaje: Mensaje;
   esMio: boolean;
-  perfil?: Perfil;
+  perfil?: PerfilBurbuja;
 }
 
-// ----------- COMPONENTE -----------
+// ---------------- COMPONENTE ----------------
+// Dibuja un mensaje individual diferenciando estilo propio y remoto
 export default function MessageBubble({
   mensaje,
   esMio,
   perfil,
-}: MessageBubbleProps) {
+}: PropiedadesBurbujaMensaje) {
   return (
     <div
       className={`flex items-start gap-2 animate-fade animate-delay-200 ${
@@ -56,3 +57,4 @@ export default function MessageBubble({
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-// ----------- IMPORTS -----------
+// ---------------- IMPORTACIONES ----------------
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import {
@@ -33,7 +33,7 @@ const buildDefaultUserSettings = (userId: string): UserSettings => ({
   updated_at: "",
 });
 
-// ----------- FUNCIONES -----------
+// ---------------- FUNCIONES ----------------
 const ejecutarAccionIA = async (
   texto: string,
   action: ImproveAction,
@@ -54,9 +54,9 @@ const ejecutarAccionIA = async (
   return data.outputText?.trim() || null;
 };
 
-// ----------- EXPORT HOOK -----------
+// ---------------- HOOK ----------------
 export const useChat = () => {
-  // ----------- ESTADOS DE UI -----------
+  // ---------------- ESTADO ----------------
   const [cargando, setCargando] = useState(true);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [cargandoIA, setCargandoIA] = useState(false);
@@ -67,7 +67,7 @@ export const useChat = () => {
   const [guardandoConfigIA, setGuardandoConfigIA] = useState(false);
   const [configIA, setConfigIA] = useState<UserSettings | null>(null);
 
-  // ----------- HOOKS COMPUESTOS -----------
+  // ---------------- HOOKS_COMPUESTOS ----------------
   const { usuario, cerrarSesion } = useAuth();
   const {
     salas,
@@ -94,7 +94,7 @@ export const useChat = () => {
     cargarPerfiles,
   );
 
-  // ----------- FUNCIONES -----------
+  // ---------------- FUNCIONES ----------------
   const cargarConfigIA = useCallback(async (): Promise<void> => {
     if (!usuario?.id) {
       setConfigIA(null);
@@ -212,7 +212,7 @@ export const useChat = () => {
     }
   };
 
-  // ----------- EFFECTS -----------
+  // ---------------- EFECTOS ----------------
   useEffect(() => {
     const ejecutarCarga = async (): Promise<void> => {
       await cargarConfigIA();
@@ -235,7 +235,7 @@ export const useChat = () => {
     window.location.reload();
   }, [errorSalaEliminada]);
 
-  // ----------- RETORNO -----------
+  // ---------------- RETORNO ----------------
   return {
     // Estados
     cargando,
@@ -272,3 +272,4 @@ export const useChat = () => {
     errorSalaEliminada,
   };
 };
+

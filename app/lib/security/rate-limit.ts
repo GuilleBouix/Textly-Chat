@@ -1,88 +1,95 @@
+// ---------------- IMPORTACIONES ----------------
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-type Namespace = "improve" | "users_meta";
+// ---------------- TIPOS ----------------
+type EspacioLimite = "improve" | "users_meta";
 
-type RateLimitResult =
+type ResultadoLimiteSolicitudes =
   | {
-      ok: true;
+      permitido: true;
     }
   | {
-      ok: false;
-      retryAfter: number;
+      permitido: false;
+      reintentarEn: number;
     }
   | {
-      ok: false;
-      misconfigured: true;
+      permitido: false;
+      malConfigurado: true;
     };
 
-const IMPROVE_MAX = Number(process.env.RATE_LIMIT_IMPROVE_MAX ?? 20);
-const USERS_META_MAX = Number(process.env.RATE_LIMIT_META_MAX ?? 60);
-const WINDOW = "5 m";
+// ---------------- CONSTANTES ----------------
+const MAXIMO_MEJORAR = Number(process.env.RATE_LIMIT_IMPROVE_MAX ?? 20);
+const MAXIMO_META_USUARIOS = Number(process.env.RATE_LIMIT_META_MAX ?? 60);
+const VENTANA = "5 m";
 
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const urlRedis = process.env.UPSTASH_REDIS_REST_URL;
+const tokenRedis = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-const isRedisConfigured = Boolean(redisUrl && redisToken);
+const redisConfigurado = Boolean(urlRedis && tokenRedis);
 
-let improveRatelimit: Ratelimit | null = null;
-let usersMetaRatelimit: Ratelimit | null = null;
+let limiteMejorar: Ratelimit | null = null;
+let limiteMetaUsuarios: Ratelimit | null = null;
 
-const buildRateLimiter = (limit: number): Ratelimit | null => {
-  if (!isRedisConfigured) return null;
+// ---------------- FUNCIONES ----------------
+// Crea una instancia de rate limiter para una cuota específica
+const crearLimitador = (limite: number): Ratelimit | null => {
+  if (!redisConfigurado) return null;
 
   const redis = new Redis({
-    url: redisUrl!,
-    token: redisToken!,
+    url: urlRedis!,
+    token: tokenRedis!,
   });
 
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(limit, WINDOW),
+    limiter: Ratelimit.slidingWindow(limite, VENTANA),
     analytics: true,
     prefix: "textly-chat",
   });
 };
 
-const getNamespaceLimiter = (namespace: Namespace): Ratelimit | null => {
-  if (namespace === "improve") {
-    if (!improveRatelimit) improveRatelimit = buildRateLimiter(IMPROVE_MAX);
-    return improveRatelimit;
+// Devuelve el limitador correspondiente al namespace del endpoint
+const obtenerLimitadorPorEspacio = (espacio: EspacioLimite): Ratelimit | null => {
+  if (espacio === "improve") {
+    if (!limiteMejorar) limiteMejorar = crearLimitador(MAXIMO_MEJORAR);
+    return limiteMejorar;
   }
 
-  if (!usersMetaRatelimit) usersMetaRatelimit = buildRateLimiter(USERS_META_MAX);
-  return usersMetaRatelimit;
+  if (!limiteMetaUsuarios) limiteMetaUsuarios = crearLimitador(MAXIMO_META_USUARIOS);
+  return limiteMetaUsuarios;
 };
 
-export const checkRateLimit = async ({
-  namespace,
-  userId,
-  ipHash,
+// Verifica si una solicitud puede continuar según usuario e IP hasheada
+export const verificarLimiteSolicitudes = async ({
+  espacio,
+  idUsuario,
+  hashIp,
 }: {
-  namespace: Namespace;
-  userId: string;
-  ipHash: string;
-}): Promise<RateLimitResult> => {
-  const limiter = getNamespaceLimiter(namespace);
+  espacio: EspacioLimite;
+  idUsuario: string;
+  hashIp: string;
+}): Promise<ResultadoLimiteSolicitudes> => {
+  const limitador = obtenerLimitadorPorEspacio(espacio);
 
-  if (!limiter) {
+  if (!limitador) {
     if (process.env.NODE_ENV === "production") {
-      return { ok: false, misconfigured: true };
+      return { permitido: false, malConfigurado: true };
     }
 
-    return { ok: true };
+    return { permitido: true };
   }
 
-  const key = `rl:${namespace}:${userId}:${ipHash}`;
-  const result = await limiter.limit(key);
+  const llave = `rl:${espacio}:${idUsuario}:${hashIp}`;
+  const resultado = await limitador.limit(llave);
 
-  if (result.success) {
-    return { ok: true };
+  if (resultado.success) {
+    return { permitido: true };
   }
 
-  const retryAfterMs = Math.max(result.reset - Date.now(), 0);
+  const milisegundosReintento = Math.max(resultado.reset - Date.now(), 0);
   return {
-    ok: false,
-    retryAfter: Math.ceil(retryAfterMs / 1000),
+    permitido: false,
+    reintentarEn: Math.ceil(milisegundosReintento / 1000),
   };
 };
