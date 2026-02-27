@@ -206,13 +206,6 @@ Hardening de capa app ya aplicado:
 
 ## Capturas
 
-Puedes agregar capturas aqui cuando publiques el repo:
-
-```md
-![Login](ruta-o-url-login)
-![Chat](ruta-o-url-chat)
-```
-
 ## Licencia
 
-Este proyecto se distribuye como proyecto personal de practica. Puedes agregar una licencia formal (`MIT`, por ejemplo) si lo vas a abrir publicamente.
+Este proyecto se distribuye como proyecto personal de practica.
