@@ -1,162 +1,218 @@
-# Textly Chat - Chat dual con IA asistida
+# Textly Chat
 
-Documentacion tecnica del proyecto: stack, arquitectura de datos, seguridad aplicada en capa app y flujos funcionales.
+Aplicacion de chat en tiempo real con salas privadas de 2 participantes y asistente de IA para mejorar o traducir mensajes.
 
-## 1) Stack actual
+## Caracteristicas
 
-- **Frontend/SSR**: Next.js 16.1.6 (App Router)
-- **UI**: React 19.2.3 + Tailwind CSS v4
-- **Backend de datos**: Supabase (Auth, Postgres, Realtime)
-- **IA**: Google Gemini via route handler (`/api/improve`)
-- **Seguridad app**: Zod + Upstash Redis + Upstash Ratelimit
-- **Gestor de paquetes**: pnpm
+- Chat en tiempo real con Supabase Realtime.
+- Salas con `share_code` para unirse facilmente.
+- Autenticacion con Google (Supabase Auth).
+- Asistente de IA por usuario:
+  - Mejorar redaccion.
+  - Traducir mensajes.
+  - Configuracion persistente en `user_settings`.
+- Seguridad de capa app implementada:
+  - Validacion de payloads con Zod.
+  - Rate limiting distribuido (Upstash) en endpoints sensibles.
+  - Control de acceso en `/api/users/meta` por alcance de sala.
+  - Security headers globales (CSP, XFO, nosniff, etc.).
 
-## 2) Arquitectura de datos (Supabase)
+## Tecnologias
 
-### Tablas y columnas
+- Next.js 16.1.6 (App Router)
+- React 19.2.3
+- TypeScript
+- Tailwind CSS v4
+- Supabase (`@supabase/ssr`, `@supabase/supabase-js`)
+- Google Gemini (`@google/generative-ai`)
+- Zod
+- Upstash Redis + Upstash Ratelimit
 
-#### `profiles`
-| Column     | Type                     |
-|------------|--------------------------|
-| id         | uuid                     |
-| username   | text                     |
-| email      | text                     |
-| created_at | timestamp with time zone |
+## Requisitos previos
 
-#### `rooms`
-| Column        | Type                     |
-|---------------|--------------------------|
-| id            | uuid                     |
-| room_name     | text                     |
-| share_code    | text                     |
-| participant_1 | uuid                     |
-| participant_2 | uuid                     |
-| created_at    | timestamp with time zone |
+- Node.js 18+
+- pnpm
+- Proyecto en Supabase
+- Cuenta/credenciales de Google OAuth configuradas en Supabase
+- (Produccion recomendada) Upstash Redis
 
-#### `messages`
-| Column     | Type                     |
-|------------|--------------------------|
-| id         | uuid                     |
-| room_id    | uuid                     |
-| sender_id  | uuid                     |
-| content    | text                     |
-| created_at | timestamp with time zone |
+## Instalacion
 
-#### `user_settings`
-| Column               | Type                     |
-|----------------------|--------------------------|
-| user_id              | uuid                     |
-| assistant_enabled    | boolean                  |
-| writing_mode         | text                     |
-| translation_language | text                     |
-| created_at           | timestamp with time zone |
-| updated_at           | timestamp with time zone |
+1. Clona el repositorio:
 
-## 3) Politicas RLS (exactas)
+```bash
+git clone https://github.com/tu-usuario/textly-chat.git
+cd textly-chat
+```
 
-### `rooms`
-- `rooms_delete` (DELETE): `(auth.uid() = participant_1) OR (auth.uid() = participant_2)`
-- `rooms_insert` (INSERT, WITH CHECK): `auth.uid() = participant_1`
-- `rooms_select` (SELECT): `(auth.uid() = participant_1) OR (auth.uid() = participant_2)`
-- `rooms_select_open_for_join` (SELECT): `participant_2 IS NULL`
-  - Esta policy permite descubrir salas abiertas para unirse.
-- `rooms_update_unirse` (UPDATE):
-  - USING: `(participant_2 IS NULL) AND (participant_1 <> auth.uid())`
-  - WITH CHECK: `(participant_2 = auth.uid()) AND (participant_1 <> auth.uid())`
+2. Instala dependencias:
 
-### `messages`
-- `messages_insert` (INSERT, WITH CHECK): `auth.uid() = sender_id`
-- `messages_select` (SELECT): solo si el usuario autenticado participa en la sala del mensaje
+```bash
+pnpm install
+```
 
-### `user_settings`
-- `Users can insert own settings` (INSERT, WITH CHECK): `auth.uid() = user_id`
-- `Users can update own settings` (UPDATE): `auth.uid() = user_id`
-- `Users can view own settings` (SELECT): `auth.uid() = user_id`
+3. Crea `.env.local` en la raiz y agrega variables:
 
-## 4) Funciones y triggers
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+GEMINI_API_KEY=
 
-### Funciones
+# opcional
+GEMINI_MODEL=gemini-2.5-flash
+RATE_LIMIT_IMPROVE_MAX=20
+RATE_LIMIT_META_MAX=60
+
+# recomendado para rate limit distribuido
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+```
+
+## Scripts
+
+| Comando | Descripcion |
+|---|---|
+| `pnpm dev` | Inicia entorno local |
+| `pnpm build` | Build de produccion |
+| `pnpm start` | Ejecuta build de produccion |
+| `pnpm lint` | Ejecuta ESLint |
+
+## Uso
+
+Inicia desarrollo:
+
+```bash
+pnpm dev
+```
+
+App disponible en `http://localhost:3000`.
+
+Flujo principal:
+- Login con Google.
+- Crear sala o unirse con codigo.
+- Enviar mensajes en tiempo real.
+- Usar IA para mejorar/traducir segun `user_settings`.
+
+## Estructura del proyecto
+
+```text
+app/
+  api/
+    improve/route.ts
+    users/meta/route.ts
+  auth/callback/route.ts
+  components/
+    chat/
+    sidebar/
+    skeletons/
+    ui/
+  hooks/
+    useAuth.ts
+    useChat.ts
+    useMensajes.ts
+    useRooms.ts
+  lib/
+    avatar.ts
+    supabaseClient.ts
+    utils.ts
+    security/
+      logger.ts
+      rate-limit.ts
+      request.ts
+      schemas.ts
+  types/database.ts
+  layout.tsx
+  login/page.tsx
+  page.tsx
+
+middleware.ts
+next.config.ts
+```
+
+## Endpoints principales
+
+### `POST /api/improve`
+
+Input:
+
+```json
+{ "action": "improve" | "translate", "text": "..." }
+```
+
+Reglas:
+- `text`: 1..1500 caracteres.
+- Requiere sesion.
+- Aplica rate limit.
+
+Respuestas comunes:
+- `200`, `400`, `401`, `403`, `429`, `500`.
+
+### `POST /api/users/meta`
+
+Input:
+
+```json
+{ "ids": ["uuid", "uuid"] }
+```
+
+Reglas:
+- Maximo 50 IDs.
+- UUID valido.
+- Solo devuelve usuarios autorizados por alcance de sala compartida.
+- Aplica rate limit.
+
+Respuestas comunes:
+- `200`, `400`, `401`, `429`, `500`.
+
+## Supabase (schema actual)
+
+### Tablas
+
+- `profiles`: `id`, `username`, `email`, `created_at`
+- `rooms`: `id`, `room_name`, `share_code`, `participant_1`, `participant_2`, `created_at`
+- `messages`: `id`, `room_id`, `sender_id`, `content`, `created_at`
+- `user_settings`: `user_id`, `assistant_enabled`, `writing_mode`, `translation_language`, `created_at`, `updated_at`
+
+### Policies RLS (nombres exactos)
+
+- `rooms_delete`
+- `rooms_insert`
+- `rooms_select`
+- `rooms_select_open_for_join`
+- `rooms_update_unirse`
+- `messages_insert`
+- `messages_select`
+- `Users can insert own settings`
+- `Users can update own settings`
+- `Users can view own settings`
+
+### Funciones y trigger confirmados
+
 - `handle_new_user()`
 - `handle_new_user_settings()`
 - `set_updated_at_user_settings()`
+- Trigger: `on_update_user_settings` (`BEFORE UPDATE` en `user_settings`)
 
-### Trigger confirmado
-- Tabla: `user_settings`
-- Nombre: `on_update_user_settings`
-- Evento: `UPDATE`
-- Momento: `BEFORE`
-- Definicion: `EXECUTE FUNCTION set_updated_at_user_settings()`
+## Seguridad
 
-## 5) Hardening aplicado (Fase 1 - capa app)
+Hardening de capa app ya aplicado:
+- Zod en validacion de inputs sensibles.
+- Rate limiting distribuido con Upstash.
+- Hash de IP + request ID para trazabilidad.
+- Logging estructurado para eventos de seguridad.
+- Security headers globales.
+- Middleware de rutas privadas/publicas.
 
-- Validacion de payloads con Zod en endpoints sensibles.
-- Rate limiting distribuido con Upstash en:
-  - `POST /api/improve`
-  - `POST /api/users/meta`
-- Trazabilidad de request con `requestId`.
-- Hash de IP para observabilidad sin exponer IP cruda.
-- Logging estructurado de eventos de seguridad.
-- Control de acceso en `/api/users/meta` por pertenencia de salas compartidas.
-- Headers de seguridad globales en `next.config.ts`:
-  - CSP
-  - `X-Frame-Options`
-  - `X-Content-Type-Options`
-  - `Referrer-Policy`
-  - `Permissions-Policy`
-  - HSTS en produccion
-- Proteccion de rutas con `middleware.ts` y excepciones de acceso publico.
+## Capturas
 
-## 6) Variables de entorno
+Puedes agregar capturas aqui cuando publiques el repo:
 
-### Requeridas
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `GEMINI_API_KEY`
+```md
+![Login](ruta-o-url-login)
+![Chat](ruta-o-url-chat)
+```
 
-### Seguridad / Rate limit
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
+## Licencia
 
-### Opcionales
-- `GEMINI_MODEL` (default: `gemini-2.5-flash`)
-- `RATE_LIMIT_IMPROVE_MAX` (default: `20`)
-- `RATE_LIMIT_META_MAX` (default: `60`)
-
-## 7) Flujos funcionales actuales
-
-### Chat en tiempo real
-- Carga de salas y mensajes desde Supabase.
-- Suscripciones realtime para nuevos mensajes.
-- Envio de mensajes con validacion de sala activa.
-
-### IA asistida
-- Acciones soportadas: mejorar redaccion o traducir.
-- Configuracion por usuario en `user_settings`:
-  - `assistant_enabled`
-  - `writing_mode`
-  - `translation_language`
-- Respuestas de error esperables:
-  - `400` payload invalido
-  - `401` no autenticado
-  - `403` operacion no permitida
-  - `429` limite excedido
-  - `500` error interno
-
-## 8) Endpoints principales
-
-### `POST /api/improve`
-- Input: `{ action: "improve" | "translate", text: string }`
-- Reglas: `text` entre 1 y 1500 chars
-- Seguridad: auth + zod + rate limit + logs estructurados
-
-### `POST /api/users/meta`
-- Input: `{ ids: string[] }` (UUID, max 50)
-- Seguridad: auth + zod + rate limit + filtro por alcance de sala
-- Devuelve solo usuarios autorizados por contexto de chat
-
-## 9) Limitaciones / siguiente fase
-
-Esta documentacion cubre el hardening aplicado en la capa app (frontend + route handlers).
-
-El reforzamiento adicional en capa DB (fase 2), como endurecimiento extra de politicas o funciones SQL complementarias, se documentara cuando se implemente.
+Este proyecto se distribuye como proyecto personal de practica. Puedes agregar una licencia formal (`MIT`, por ejemplo) si lo vas a abrir publicamente.
