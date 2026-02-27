@@ -3,53 +3,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Mensaje } from "../types/database";
 
-// ----------- TIPOS -----------
-type MensajesLocalCache = {
-  version: 1;
-  savedAt: number;
-  mensajes: Mensaje[];
-};
-
-// ----------- CONSTANTES -----------
-const MENSAJES_CACHE_TTL_MS = 30 * 1000;
-const MENSAJES_CACHE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
-
-// ----------- FUNCIONES -----------
-const cacheKeyMensajes = (usuarioId: string, salaId: string): string =>
-  `textly:messages-cache:${usuarioId}:${salaId}`;
-
-const leerCacheMensajes = (usuarioId: string, salaId: string): MensajesLocalCache | null => {
-  try {
-    const raw = localStorage.getItem(cacheKeyMensajes(usuarioId, salaId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as MensajesLocalCache;
-    if (!parsed || parsed.version !== 1) return null;
-    if (Date.now() - parsed.savedAt > MENSAJES_CACHE_MAX_AGE_MS) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-};
-
-const guardarCacheMensajes = (usuarioId: string, salaId: string, mensajes: Mensaje[]): void => {
-  try {
-    localStorage.setItem(
-      cacheKeyMensajes(usuarioId, salaId),
-      JSON.stringify({
-        version: 1,
-        savedAt: Date.now(),
-        mensajes: mensajes.slice(-300),
-      } satisfies MensajesLocalCache),
-    );
-  } catch {}
-};
-
-const borrarCacheMensajes = (usuarioId: string, salaId: string): void => {
-  try {
-    localStorage.removeItem(cacheKeyMensajes(usuarioId, salaId));
-  } catch {}
-};
-
 // ----------- EXPORT HOOK -----------
 export const useMensajes = (
   idSalaActiva: string | null,
@@ -80,17 +33,9 @@ export const useMensajes = (
   };
 
   useEffect(() => {
-    if (!idSalaActiva || !usuarioId) return;
-
-    const cache = leerCacheMensajes(usuarioId, idSalaActiva);
-    if (cache?.mensajes?.length) {
-      setMensajes(cache.mensajes);
-      void onCargarPerfiles(cache.mensajes.map((m) => m.sender_id));
-    } else {
-      setMensajes([]);
+    if (!idSalaActiva || !usuarioId) {
+      return;
     }
-
-    const cacheReciente = cache && Date.now() - cache.savedAt < MENSAJES_CACHE_TTL_MS;
 
     const cargarMensajes = async (): Promise<void> => {
       const { data } = await supabase
@@ -106,9 +51,7 @@ export const useMensajes = (
       }
     };
 
-    if (!cacheReciente) {
-      void cargarMensajes();
-    }
+    void cargarMensajes();
 
     const canalMensajes = supabase
       .channel(`sala-${idSalaActiva}`)
@@ -133,20 +76,9 @@ export const useMensajes = (
     };
   }, [idSalaActiva, usuarioId, onCargarPerfiles]);
 
-  useEffect(() => {
-    if (!idSalaActiva || !usuarioId) return;
-    guardarCacheMensajes(usuarioId, idSalaActiva, mensajes);
-  }, [usuarioId, idSalaActiva, mensajes]);
-
-  const limpiarCacheSala = (salaId: string): void => {
-    if (!usuarioId || !salaId) return;
-    borrarCacheMensajes(usuarioId, salaId);
-  };
-
   return {
     mensajes,
     enviarMensaje,
     setMensajes,
-    limpiarCacheSala,
   };
 };

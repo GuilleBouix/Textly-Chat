@@ -12,18 +12,6 @@ export type UsuarioPerfil = {
   avatarUrl?: string | null;
 };
 
-type UsuarioPerfilCache = {
-  userId: string;
-  savedAt: number;
-  nombre?: string;
-  username?: string;
-  avatarUrl?: string | null;
-};
-
-// ----------- CONSTANTES -----------
-const AUTH_CACHE_KEY = "textly:auth-profile";
-const AUTH_CACHE_TTL_MS = 10 * 60 * 1000;
-
 // ----------- FUNCIONES -----------
 const cerrarSesion = async (): Promise<void> => {
   const { error } = await supabase.auth.signOut();
@@ -33,27 +21,7 @@ const cerrarSesion = async (): Promise<void> => {
     return;
   }
 
-  try {
-    localStorage.removeItem(AUTH_CACHE_KEY);
-  } catch {}
-
   window.location.href = "/login";
-};
-
-const obtenerCacheAuth = (): UsuarioPerfilCache | null => {
-  try {
-    const raw = localStorage.getItem(AUTH_CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as UsuarioPerfilCache;
-  } catch {
-    return null;
-  }
-};
-
-const guardarCacheAuth = (payload: UsuarioPerfilCache): void => {
-  try {
-    localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(payload));
-  } catch {}
 };
 
 // ----------- EXPORT HOOK -----------
@@ -67,23 +35,6 @@ export const useAuth = () => {
       } = await supabase.auth.getUser();
 
       if (!user) return;
-
-      const cache = obtenerCacheAuth();
-      const cacheVigente =
-        cache &&
-        cache.userId === user.id &&
-        Date.now() - cache.savedAt < AUTH_CACHE_TTL_MS;
-
-      if (cacheVigente) {
-        setUsuario({
-          id: user.id,
-          email: user.email ?? undefined,
-          nombre: cache.nombre,
-          username: cache.username,
-          avatarUrl: cache.avatarUrl ?? null,
-        });
-        return;
-      }
 
       const { data: profileData } = await supabase
         .from("profiles")
@@ -110,14 +61,6 @@ export const useAuth = () => {
       setUsuario({
         id: user.id,
         email: user.email ?? undefined,
-        nombre: nombreUsuario,
-        username: usernamePerfil,
-        avatarUrl: avatarUsuario,
-      });
-
-      guardarCacheAuth({
-        userId: user.id,
-        savedAt: Date.now(),
         nombre: nombreUsuario,
         username: usernamePerfil,
         avatarUrl: avatarUsuario,

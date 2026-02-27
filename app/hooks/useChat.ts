@@ -49,6 +49,7 @@ const ejecutarAccionIA = async (
   const res = await fetch("/api/improve", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    cache: "no-store",
     body: JSON.stringify({ text: texto, action }),
   });
 
@@ -89,18 +90,17 @@ export const useChat = () => {
     validarSalaActiva,
   } = useRooms(usuario?.id);
 
-  const { mensajes, enviarMensaje, setMensajes, limpiarCacheSala } =
-    useMensajes(
-      idSalaActiva,
-      usuario?.id,
-      validarSalaActiva,
-      (error) => {
-        setMensajes([]);
-        alert(error + " La pagina se actualizara.");
-        window.location.reload();
-      },
-      cargarPerfiles,
-    );
+  const { mensajes, enviarMensaje, setMensajes } = useMensajes(
+    idSalaActiva,
+    usuario?.id,
+    validarSalaActiva,
+    (error) => {
+      setMensajes([]);
+      alert(error + " La pagina se actualizara.");
+      window.location.reload();
+    },
+    cargarPerfiles,
+  );
 
   // ----------- FUNCIONES -----------
   const cargarConfigIA = useCallback(async (): Promise<void> => {
@@ -215,7 +215,6 @@ export const useChat = () => {
   // Elimina la sala y limpia el estado
   const handleEliminarSala = async (id: string): Promise<void> => {
     await eliminarSala(id);
-    limpiarCacheSala(id);
     if (idSalaActiva === id) {
       setMensajes([]);
     }

@@ -4,6 +4,9 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { pickAvatarFromMetadata } from "../../../lib/avatar";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type BasicUser = {
   id: string;
   email?: string;

@@ -12,78 +12,13 @@ type PerfilCache = {
   avatarUrl: string | null;
 };
 
-type PerfilConTimestamp = {
-  perfil: PerfilCache;
-  fetchedAt: number;
-};
-
-type RoomsLocalCache = {
-  version: 1;
-  savedAt: number;
-  salas: Sala[];
-  idSalaActiva: string | null;
-  perfiles: Record<string, PerfilConTimestamp>;
-};
-
-// ----------- CONSTANTES -----------
-const PERFIL_TTL_MS = 5 * 60 * 1000;
-const ROOMS_CACHE_TTL_MS = 60 * 1000;
-const ROOMS_CACHE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
-
 // ----------- FUNCIONES -----------
-const cacheKeySalas = (usuarioId: string): string =>
-  `textly:rooms-cache:${usuarioId}`;
-
-const leerCacheSalas = (usuarioId: string): RoomsLocalCache | null => {
-  try {
-    const raw = localStorage.getItem(cacheKeySalas(usuarioId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as RoomsLocalCache;
-    if (!parsed || parsed.version !== 1) return null;
-    if (Date.now() - parsed.savedAt > ROOMS_CACHE_MAX_AGE_MS) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-};
-
-const recortarPerfilesCache = (
-  perfiles: Record<string, PerfilConTimestamp>,
-): Record<string, PerfilConTimestamp> => {
-  const entries = Object.entries(perfiles);
-  if (entries.length <= 120) return perfiles;
-
-  const ordenados = entries
-    .sort((a, b) => b[1].fetchedAt - a[1].fetchedAt)
-    .slice(0, 120);
-  return Object.fromEntries(ordenados);
-};
-
-const guardarCacheSalas = (
-  usuarioId: string,
-  payload: Omit<RoomsLocalCache, "version" | "savedAt">,
-): void => {
-  try {
-    localStorage.setItem(
-      cacheKeySalas(usuarioId),
-      JSON.stringify({
-        version: 1,
-        savedAt: Date.now(),
-        salas: payload.salas,
-        idSalaActiva: payload.idSalaActiva,
-        perfiles: recortarPerfilesCache(payload.perfiles),
-      } satisfies RoomsLocalCache),
-    );
-  } catch {}
-};
-
-const cargarPerfilesDesdeAPI = async (
-  ids: string[],
-): Promise<PerfilCache[]> => {
+const cargarPerfilesDesdeAPI = async (ids: string[]): Promise<PerfilCache[]> => {
   try {
     const res = await fetch("/api/users/meta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      cache: "no-store",
       body: JSON.stringify({ ids }),
     });
 
@@ -97,20 +32,13 @@ const cargarPerfilesDesdeAPI = async (
   }
 };
 
-const obtenerIdsFaltantes = (
+const obtenerIdsPendientes = (
   ids: string[],
-  cache: Record<string, PerfilConTimestamp>,
+  perfilesActuales: Record<string, PerfilCache>,
   enCurso: Set<string>,
 ): string[] => {
-  const now = Date.now();
   const idsUnicos = [...new Set(ids.filter(Boolean))];
-
-  return idsUnicos.filter((id) => {
-    if (enCurso.has(id)) return false;
-    const cached = cache[id];
-    if (!cached) return true;
-    return now - cached.fetchedAt > PERFIL_TTL_MS;
-  });
+  return idsUnicos.filter((id) => !perfilesActuales[id] && !enCurso.has(id));
 };
 
 // ----------- EXPORT HOOK -----------
@@ -118,21 +46,17 @@ export const useRooms = (usuarioId: string | undefined) => {
   const [salas, setSalas] = useState<Sala[]>([]);
   const [idSalaActiva, setIdSalaActiva] = useState<string | null>(null);
   const [perfiles, setPerfiles] = useState<Record<string, PerfilCache>>({});
-  const [errorSalaEliminada, setErrorSalaEliminada] = useState<string | null>(
-    null,
-  );
+  const [errorSalaEliminada, setErrorSalaEliminada] = useState<string | null>(null);
 
-  const cachePerfilesRef = useRef<Record<string, PerfilConTimestamp>>({});
+  const perfilesRef = useRef<Record<string, PerfilCache>>({});
   const enCursoPerfilesRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    perfilesRef.current = perfiles;
+  }, [perfiles]);
 
   const agregarPerfiles = (lista: PerfilCache[]): void => {
     if (!lista.length) return;
-
-    const now = Date.now();
-    lista.forEach((p) => {
-      if (!p?.id) return;
-      cachePerfilesRef.current[p.id] = { perfil: p, fetchedAt: now };
-    });
 
     setPerfiles((prev) => {
       const next = { ...prev };
@@ -145,11 +69,7 @@ export const useRooms = (usuarioId: string | undefined) => {
   };
 
   const cargarPerfiles = useCallback(async (ids: string[]): Promise<void> => {
-    const faltantes = obtenerIdsFaltantes(
-      ids,
-      cachePerfilesRef.current,
-      enCursoPerfilesRef.current,
-    );
+    const faltantes = obtenerIdsPendientes(ids, perfilesRef.current, enCursoPerfilesRef.current);
     if (!faltantes.length) return;
 
     faltantes.forEach((id) => enCursoPerfilesRef.current.add(id));
@@ -220,9 +140,7 @@ export const useRooms = (usuarioId: string | undefined) => {
     }
   };
 
-  const unirseASala = async (
-    codigo: string,
-  ): Promise<{ success?: boolean; error?: string }> => {
+  const unirseASala = async (codigo: string): Promise<{ success?: boolean; error?: string }> => {
     if (!usuarioId || !codigo) return { error: "Faltan datos" };
 
     const { data: sala, error: errorBuscar } = await supabase
@@ -232,8 +150,7 @@ export const useRooms = (usuarioId: string | undefined) => {
       .maybeSingle();
 
     if (errorBuscar || !sala) return { error: "La sala no existe." };
-    if (sala.participant_1 === usuarioId)
-      return { error: "Ya eres el creador de esta sala." };
+    if (sala.participant_1 === usuarioId) return { error: "Ya eres el creador de esta sala." };
     if (sala.participant_2) return { error: "La sala ya esta completa." };
 
     const { error: errorUpdate } = await supabase
@@ -260,32 +177,13 @@ export const useRooms = (usuarioId: string | undefined) => {
   };
 
   useEffect(() => {
-    if (!usuarioId) return;
-
-    const cache = leerCacheSalas(usuarioId);
-    if (cache) {
-      setSalas(cache.salas || []);
-      setIdSalaActiva(cache.idSalaActiva || null);
-      cachePerfilesRef.current = cache.perfiles || {};
-      setPerfiles(
-        Object.fromEntries(
-          Object.entries(cache.perfiles || {}).map(([id, value]) => [
-            id,
-            value.perfil,
-          ]),
-        ),
-      );
-      const idsParticipantesCache = (cache.salas || []).flatMap((s) =>
-        [s.participant_1, s.participant_2].filter((id): id is string =>
-          Boolean(id),
-        ),
-      );
-      void cargarPerfiles(idsParticipantesCache);
+    if (!usuarioId) {
+      setSalas([]);
+      setIdSalaActiva(null);
+      setPerfiles({});
+      enCursoPerfilesRef.current.clear();
+      return;
     }
-
-    const cacheReciente =
-      cache && Date.now() - cache.savedAt < ROOMS_CACHE_TTL_MS;
-    if (cacheReciente) return;
 
     const cargarSalas = async (): Promise<void> => {
       const { data } = await supabase
@@ -302,15 +200,13 @@ export const useRooms = (usuarioId: string | undefined) => {
         });
 
         const idsParticipantes = data.flatMap((s) =>
-          [s.participant_1, s.participant_2].filter((id): id is string =>
-            Boolean(id),
-          ),
+          [s.participant_1, s.participant_2].filter((id): id is string => Boolean(id)),
         );
         await cargarPerfiles(idsParticipantes);
       }
     };
 
-    cargarSalas();
+    void cargarSalas();
   }, [usuarioId, cargarPerfiles]);
 
   useEffect(() => {
@@ -320,22 +216,11 @@ export const useRooms = (usuarioId: string | undefined) => {
     if (!salaActiva) return;
 
     const idOtroParticipante =
-      salaActiva.participant_1 === usuarioId
-        ? salaActiva.participant_2
-        : salaActiva.participant_1;
+      salaActiva.participant_1 === usuarioId ? salaActiva.participant_2 : salaActiva.participant_1;
 
     if (!idOtroParticipante) return;
     void cargarPerfiles([idOtroParticipante]);
   }, [usuarioId, idSalaActiva, salas, cargarPerfiles]);
-
-  useEffect(() => {
-    if (!usuarioId) return;
-    guardarCacheSalas(usuarioId, {
-      salas,
-      idSalaActiva,
-      perfiles: cachePerfilesRef.current,
-    });
-  }, [usuarioId, salas, idSalaActiva, perfiles]);
 
   useEffect(() => {
     if (!idSalaActiva || !usuarioId) return;
