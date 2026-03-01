@@ -1,6 +1,8 @@
+<img width="2353" height="664" alt="Textly Chat Banner" src="https://github.com/user-attachments/assets/d5ca0515-3151-4dc1-9097-467db4cf02dd" />
+
 # Textly Chat
 
-Aplicacion de chat en tiempo real con salas privadas de 2 participantes y asistente de IA para mejorar o traducir mensajes.
+Aplicacion de chat en tiempo real con salas privadas de 2 participantes y asistente de IA para mejorar y traducir mensajes.
 
 ## Caracteristicas
 
