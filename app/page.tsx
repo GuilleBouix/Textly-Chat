@@ -1,6 +1,6 @@
 // ---------------- IMPORTACIONES ----------------
 "use client";
-import { useReducer, useRef } from "react";
+import { useReducer, useRef, useState } from "react";
 import { useChat } from "./hooks/useChat";
 import { Sidebar } from "./components/sidebar";
 import {
@@ -28,6 +28,8 @@ type AccionInterfazChat =
   | { type: "setIdSalaAEliminar"; payload: string | null }
   | { type: "setCodigoEntrada"; payload: string };
 
+type VistaMobile = "lista" | "chat";
+
 // ---------------- CONSTANTES ----------------
 const estadoInicialInterfaz: EstadoInterfazChat = {
   mostrarModalUnirse: false,
@@ -38,7 +40,7 @@ const estadoInicialInterfaz: EstadoInterfazChat = {
 };
 
 // ---------------- FUNCIONES ----------------
-// Actualiza estado de UI local del chat según la acción recibida
+// Actualiza estado de UI local del chat segun la accion recibida
 const reductorInterfazChat = (
   estadoActual: EstadoInterfazChat,
   accion: AccionInterfazChat,
@@ -90,7 +92,11 @@ export default function ChatPage() {
 
   // ---------------- ESTADO ----------------
   // Gestiona el estado local de modales y formularios de la interfaz
-  const [estadoInterfaz, despacharInterfaz] = useReducer(reductorInterfazChat, estadoInicialInterfaz);
+  const [estadoInterfaz, despacharInterfaz] = useReducer(
+    reductorInterfazChat,
+    estadoInicialInterfaz,
+  );
+  const [vistaMobile, setVistaMobile] = useState<VistaMobile>("lista");
   const finMensajesRef = useRef<HTMLDivElement | null>(null);
 
   // ---------------- VARIABLES_DERIVADAS ----------------
@@ -105,20 +111,29 @@ export default function ChatPage() {
   const participanteOtroPerfil = idParticipanteOtro
     ? perfiles[idParticipanteOtro]
     : null;
+  const mostrarListaMobile = vistaMobile === "lista" || !idSalaActiva;
+  const mostrarChatMobile = vistaMobile === "chat" && Boolean(idSalaActiva);
 
   // ---------------- FUNCIONES ----------------
-  // Confirma unión de sala por código y limpia formulario al completar
+  // Selecciona la sala y, en mobile, muestra la conversacion en pantalla completa
+  const handleSeleccionarSala = (id: string): void => {
+    setIdSalaActiva(id);
+    setVistaMobile("chat");
+  };
+
+  // Confirma union de sala por codigo y limpia formulario al completar
   const handleConfirmarUnion = async (): Promise<void> => {
     const resultado = await unirseASala(estadoInterfaz.codigoEntrada);
     if (resultado.success) {
       despacharInterfaz({ type: "setMostrarModalUnirse", payload: false });
       despacharInterfaz({ type: "setCodigoEntrada", payload: "" });
+      setVistaMobile("chat");
     } else {
       alert(resultado.error);
     }
   };
 
-  // Confirma eliminación de sala seleccionada en modal de confirmación
+  // Confirma eliminacion de sala seleccionada en modal de confirmacion
   const handleConfirmarEliminacion = (): void => {
     if (estadoInterfaz.idSalaAEliminar) {
       eliminarSala(estadoInterfaz.idSalaAEliminar);
@@ -126,14 +141,14 @@ export default function ChatPage() {
     }
   };
 
-  // Crea una nueva sala y resetea el estado de creación local
+  // Crea una nueva sala y resetea el estado de creacion local
   const handleConfirmarCreacion = (): void => {
     crearSala(estadoInterfaz.nombreSalaNueva);
     despacharInterfaz({ type: "setMostrarModalCrear", payload: false });
     despacharInterfaz({ type: "setNombreSalaNueva", payload: "" });
   };
 
-  // Envía el mensaje y desplaza al final de la conversación
+  // Envia el mensaje y desplaza al final de la conversacion
   const handleEnviarMensaje = (e: React.FormEvent): void => {
     enviarMensaje(e);
     finMensajesRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -142,7 +157,7 @@ export default function ChatPage() {
   // ---------------- RETORNO ----------------
   // Renderiza layout principal, barra lateral, chat y modales
   return (
-    <div className="relative flex h-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans">
+    <div className="relative flex h-dvh overflow-hidden bg-zinc-950 font-sans text-zinc-100 md:h-screen">
       {/* Background effects */}
       <div className="pointer-events-none absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(168,85,247,0.16),transparent_38%),radial-gradient(circle_at_78%_14%,rgba(147,51,234,0.12),transparent_35%),radial-gradient(circle_at_60%_82%,rgba(126,34,206,0.14),transparent_40%)]" />
@@ -151,31 +166,41 @@ export default function ChatPage() {
 
       {/* Sidebar - skeleton or real */}
       {cargando ? (
-        <SidebarSkeleton />
+        <div
+          className={`${mostrarListaMobile ? "flex" : "hidden"} flex-1 md:flex md:flex-none`}
+        >
+          <SidebarSkeleton />
+        </div>
       ) : (
-        <Sidebar
-          usuario={usuario}
-          salas={salas}
-          idSalaActiva={idSalaActiva || ""}
-          alSeleccionarSala={setIdSalaActiva}
-          alEliminarSala={(id) =>
-            despacharInterfaz({ type: "setIdSalaAEliminar", payload: id })
-          }
-          abrirModalUnirse={() =>
-            despacharInterfaz({ type: "setMostrarModalUnirse", payload: true })
-          }
-          abrirModalCrear={() =>
-            despacharInterfaz({ type: "setMostrarModalCrear", payload: true })
-          }
-          alCerrarSesion={cerrarSesion}
-          configIA={configIA}
-          guardandoConfigIA={guardandoConfigIA}
-          alActualizarConfigIA={actualizarConfigIA}
-        />
+        <div
+          className={`${mostrarListaMobile ? "flex" : "hidden"} flex-1 md:flex md:flex-none`}
+        >
+          <Sidebar
+            usuario={usuario}
+            salas={salas}
+            idSalaActiva={idSalaActiva || ""}
+            alSeleccionarSala={handleSeleccionarSala}
+            alEliminarSala={(id) =>
+              despacharInterfaz({ type: "setIdSalaAEliminar", payload: id })
+            }
+            abrirModalUnirse={() =>
+              despacharInterfaz({ type: "setMostrarModalUnirse", payload: true })
+            }
+            abrirModalCrear={() =>
+              despacharInterfaz({ type: "setMostrarModalCrear", payload: true })
+            }
+            alCerrarSesion={cerrarSesion}
+            configIA={configIA}
+            guardandoConfigIA={guardandoConfigIA}
+            alActualizarConfigIA={actualizarConfigIA}
+          />
+        </div>
       )}
 
       {/* Area principal - skeleton or real */}
-      <section className="relative z-10 flex flex-1 flex-col bg-zinc-950/65 backdrop-blur-[1px]">
+      <section
+        className={`${mostrarChatMobile ? "flex" : "hidden"} relative z-10 flex-1 flex-col bg-zinc-950/65 backdrop-blur-[1px] md:flex`}
+      >
         {cargando ? (
           <ChatSkeleton />
         ) : idSalaActiva && salaActiva ? (
@@ -184,6 +209,7 @@ export default function ChatPage() {
               nombreSala={salaActiva.room_name}
               codigoSala={salaActiva.share_code}
               participante2={participanteOtroPerfil}
+              alVolver={() => setVistaMobile("lista")}
             />
             <MessageList
               mensajes={mensajes}
@@ -223,7 +249,7 @@ export default function ChatPage() {
           onChange={(e) =>
             despacharInterfaz({ type: "setCodigoEntrada", payload: e.target.value })
           }
-          className="w-full bg-zinc-950 border border-zinc-800 p-3 rounded-xl outline-none focus:border-violet-500 transition-all font-mono tracking-widest uppercase text-center text-lg"
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-center text-lg font-mono tracking-widest uppercase outline-none transition-all focus:border-violet-500"
           placeholder="12345678"
           maxLength={8}
         />
@@ -234,7 +260,9 @@ export default function ChatPage() {
         titulo="Eliminar esta sala?"
         descripcion="Esto borrara todos los mensajes de forma permanente para ambos participantes."
         abierto={!!estadoInterfaz.idSalaAEliminar}
-        alCerrar={() => despacharInterfaz({ type: "setIdSalaAEliminar", payload: null })}
+        alCerrar={() =>
+          despacharInterfaz({ type: "setIdSalaAEliminar", payload: null })
+        }
         alConfirmar={handleConfirmarEliminacion}
         colorBoton="bg-red-600 hover:bg-red-500"
         textoConfirmar="Eliminar para siempre"
@@ -260,15 +288,14 @@ export default function ChatPage() {
               payload: e.target.value.slice(0, 25),
             })
           }
-          className="w-full bg-zinc-950 border border-zinc-800 p-3 rounded-xl outline-none focus:border-violet-500 transition-all text-zinc-100"
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-zinc-100 outline-none transition-all focus:border-violet-500"
           placeholder="Nombre de la sala..."
           maxLength={25}
         />
-        <p className="text-xs text-zinc-500 mt-2 text-right">
+        <p className="mt-2 text-right text-xs text-zinc-500">
           {estadoInterfaz.nombreSalaNueva.length}/25
         </p>
       </Modal>
     </div>
   );
 }
-

@@ -3,7 +3,7 @@ export default function SidebarSkeleton() {
   const tarjetasSkeleton = ["sala-1", "sala-2", "sala-3"];
 
   return (
-    <aside className="flex h-full w-80 flex-col border-r border-zinc-800 bg-zinc-900">
+    <aside className="flex h-full w-full flex-col bg-zinc-900 md:w-80 md:border-r md:border-zinc-800">
       {/* Profile section */}
       <div className="flex items-center gap-3 border-b border-zinc-800 p-6">
         <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-zinc-800" />

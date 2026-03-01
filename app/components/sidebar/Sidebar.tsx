@@ -55,7 +55,7 @@ export default function Sidebar({
 
   return (
     <>
-      <aside className="relative z-10 flex h-full w-80 flex-col border-r border-zinc-800 bg-zinc-950/70">
+      <aside className="relative z-10 flex h-full w-full flex-col bg-zinc-950/70 md:w-80 md:border-r md:border-zinc-800">
         <div className="flex h-18 items-center gap-3 border-b border-zinc-800 px-6 animate-fade">
           <UserAvatar
             src={usuario?.avatarUrl}

@@ -76,10 +76,10 @@ export default function ChatAIFunctions({
         type="button"
         onClick={() => setMostrarOpcionesIA((prev) => !prev)}
         disabled={cargandoIA || !asistenteIAActivo}
-        className={`group flex h-10 items-center justify-start overflow-hidden rounded-full border border-zinc-700 bg-zinc-900 text-purple-200 transition-all duration-300 ease-out disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${
+        className={`group flex h-10 w-10 items-center justify-start overflow-hidden rounded-full border border-zinc-700 bg-zinc-900 text-purple-200 transition-all duration-300 ease-out disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${
           menuIAAbierto
-            ? "w-36 border-purple-500 bg-zinc-800"
-            : "w-10 hover:w-36 hover:border-purple-500 hover:bg-zinc-800"
+            ? "md:w-36 md:border-purple-500 md:bg-zinc-800"
+            : "md:hover:w-36 md:hover:border-purple-500 md:hover:bg-zinc-800"
         } ${cargandoIA ? "animate-pulse" : ""}`}
         title="Asistente de IA"
         aria-label="Asistente de IA"
@@ -88,8 +88,10 @@ export default function ChatAIFunctions({
           <LuSparkles className="h-4 w-4 shrink-0" />
         </div>
         <span
-          className={`whitespace-nowrap text-xs font-semibold text-purple-100 transition-opacity duration-200 ${
-            menuIAAbierto ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          className={`hidden whitespace-nowrap text-xs font-semibold text-purple-100 transition-opacity duration-200 md:block ${
+            menuIAAbierto
+              ? "md:opacity-100"
+              : "md:opacity-0 md:group-hover:opacity-100"
           }`}
         >
           Asistente de IA
